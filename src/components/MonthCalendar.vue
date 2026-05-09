@@ -172,4 +172,21 @@ function goToday() { current.value = { year: today.getFullYear(), month: today.g
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.6;
 }
 .more-chip { font-size: 0.66rem; color: var(--text-2); font-weight: 600; padding: 0 5px; }
+
+@media (max-width: 768px) {
+  .cal-header { padding: 0.75rem; }
+  .month-label { font-size: 1rem; min-width: 130px; }
+  .weekdays { padding: 0.25rem 0.5rem 0; }
+  .weekdays span { font-size: 0.62rem; }
+  .grid { padding: 0.25rem 0.5rem 0.5rem; gap: 2px; }
+  .day-cell { padding: 0.2rem; border-radius: 4px; }
+  .day-num { width: 24px; height: 24px; font-size: 0.75rem; }
+  .event-list { flex-direction: row; flex-wrap: wrap; gap: 3px; justify-content: center; padding-top: 2px; }
+  /* Chips become small dots on mobile */
+  .event-chip {
+    width: 6px; height: 6px; border-radius: 50%;
+    padding: 0; font-size: 0; overflow: hidden; flex-shrink: 0;
+  }
+  .more-chip { display: none; }
+}
 </style>

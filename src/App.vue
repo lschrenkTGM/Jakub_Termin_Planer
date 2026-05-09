@@ -2,6 +2,8 @@
   <LoginScreen v-if="!username" @login="handleLogin" />
 
   <div v-else class="app">
+
+    <!-- ── DESKTOP SIDEBAR ── -->
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="brand">
@@ -16,7 +18,6 @@
           </div>
           <span class="brand-name">Terminplaner</span>
         </div>
-
         <button class="create-btn" @click="openGlobalModal">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
@@ -54,12 +55,7 @@
           </svg>
           <span>Keine Termine</span>
         </div>
-        <div
-          v-for="appt in upcoming"
-          :key="appt.id"
-          class="upcoming-item"
-          @click="selectDay(appt.date)"
-        >
+        <div v-for="appt in upcoming" :key="appt.id" class="upcoming-item" @click="selectDay(appt.date)">
           <div class="up-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
           <div class="up-content">
             <span class="up-title">{{ appt.title }}</span>
@@ -69,10 +65,52 @@
       </div>
     </aside>
 
+    <!-- ── MOBILE HEADER ── -->
+    <header class="mobile-header">
+      <div class="mh-brand">
+        <div class="brand-icon-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="17" rx="3" stroke="#1a73e8" stroke-width="2"/>
+            <path d="M3 9h18" stroke="#1a73e8" stroke-width="2"/>
+          </svg>
+        </div>
+        <span>Terminplaner</span>
+      </div>
+      <div class="mh-right">
+        <span v-if="loading" class="mh-loading">●</span>
+        <div class="user-avatar-sm" @click="logout" title="Abmelden">{{ username[0].toUpperCase() }}</div>
+      </div>
+    </header>
+
+    <!-- ── MAIN CONTENT ── -->
     <main class="main">
       <DayView v-if="selectedDay" :date-str="selectedDay" :username="username" @back="selectedDay = null" />
       <MonthCalendar v-else @select-day="selectDay" />
     </main>
+
+    <!-- ── MOBILE BOTTOM NAV ── -->
+    <nav class="bottom-nav">
+      <button class="bn-item" :class="{ active: !selectedDay }" @click="selectedDay = null">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span>Kalender</span>
+      </button>
+      <button class="bn-fab" @click="openGlobalModal">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="bn-item" @click="goToday">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span>Heute</span>
+      </button>
+    </nav>
 
     <AppointmentModal
       v-if="globalModal"
@@ -99,6 +137,7 @@ function handleLogin(name) {
   username.value = name
 }
 function logout() {
+  if (!confirm(`Als "${username.value}" abmelden?`)) return
   sessionStorage.removeItem('tp_user')
   username.value = ''
   selectedDay.value = null
@@ -128,6 +167,7 @@ function formatUpDate(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
 }
 
+function goToday() { selectedDay.value = todayStr }
 function openGlobalModal() { globalModal.value = true }
 async function handleGlobalSave(data) { await addAppointment(data); globalModal.value = false }
 async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal.value = false }
@@ -136,29 +176,24 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
 <style scoped>
 .app { display: flex; height: 100vh; overflow: hidden; }
 
+/* ── SIDEBAR (desktop only) ── */
 .sidebar {
   width: 268px; flex-shrink: 0;
   background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
 }
 .sidebar-top { padding: 1.25rem 1rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
-
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
-.brand-icon {
-  width: 38px; height: 38px; background: var(--blue-light);
-  border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
+.brand-icon { width: 38px; height: 38px; background: var(--blue-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .brand-name { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
-
 .create-btn {
   display: flex; align-items: center; gap: 8px;
   padding: 0.7rem 1.25rem; background: var(--blue); color: #fff;
   border: none; border-radius: 24px; font-size: 0.9rem; font-weight: 600;
   box-shadow: 0 2px 8px rgba(26,115,232,.3);
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
-.create-btn:hover { background: var(--blue-hover); box-shadow: 0 4px 14px rgba(26,115,232,.38); transform: translateY(-1px); }
-
+.create-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
 .user-card {
   display: flex; align-items: center; gap: 10px;
   padding: 0.75rem 1.25rem; margin: 0 0.5rem;
@@ -173,30 +208,96 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
 .user-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .user-name { font-size: 0.9rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-sub { font-size: 0.72rem; color: var(--text-3); }
-
 .stats-row { display: flex; gap: 0.5rem; padding: 0 1rem; margin-top: 0.25rem; }
-.stat-card {
-  flex: 1; background: var(--bg); border-radius: var(--radius-m);
-  padding: 0.85rem 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 2px;
-}
+.stat-card { flex: 1; background: var(--bg); border-radius: var(--radius-m); padding: 0.85rem 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .stat-n { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; color: var(--blue); line-height: 1; }
 .stat-l { font-size: 0.7rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
-
 .upcoming-section { flex: 1; padding: 0 0.75rem 1rem; margin-top: 0.5rem; }
 .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); padding: 0.5rem 0.5rem 0.6rem; }
 .loading-hint { font-size: 0.8rem; color: var(--text-3); padding: 0.5rem; }
 .empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 1.5rem 0; color: var(--text-3); font-size: 0.8rem; }
-
-.upcoming-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 0.6rem 0.75rem; border-radius: var(--radius-s);
-  cursor: pointer; transition: background 0.13s; margin-bottom: 2px;
-}
+.upcoming-item { display: flex; align-items: center; gap: 10px; padding: 0.6rem 0.75rem; border-radius: var(--radius-s); cursor: pointer; transition: background 0.13s; margin-bottom: 2px; }
 .upcoming-item:hover { background: var(--bg); }
 .up-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .up-content { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .up-title { font-size: 0.88rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .up-meta { font-size: 0.72rem; color: var(--text-2); }
 
+/* ── MOBILE HEADER ── */
+.mobile-header { display: none; }
+
+/* ── MAIN ── */
 .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--surface); }
+
+/* ── BOTTOM NAV (mobile only) ── */
+.bottom-nav { display: none; }
+
+/* ── MOBILE BREAKPOINT ── */
+@media (max-width: 768px) {
+  .app { flex-direction: column; }
+
+  .sidebar { display: none; }
+
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .mh-brand {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-head); font-size: 1rem; font-weight: 800; color: var(--text);
+  }
+  .brand-icon-sm {
+    width: 30px; height: 30px; background: var(--blue-light);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .mh-right { display: flex; align-items: center; gap: 8px; }
+  .mh-loading { color: var(--blue); font-size: 1.2rem; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .user-avatar-sm {
+    width: 32px; height: 32px; background: var(--blue); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: var(--font-head); font-size: 0.85rem; font-weight: 800;
+    cursor: pointer;
+  }
+
+  .main { flex: 1; overflow: hidden; min-height: 0; }
+
+  .bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0.5rem 1rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .bn-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; color: var(--text-3);
+    font-size: 0.65rem; font-weight: 600; padding: 0.4rem 1rem;
+    transition: color 0.13s;
+  }
+  .bn-item.active { color: var(--blue); }
+  .bn-item span { text-transform: uppercase; letter-spacing: 0.4px; }
+
+  .bn-fab {
+    width: 52px; height: 52px;
+    background: var(--blue); color: #fff;
+    border: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(26,115,232,.4);
+    margin-top: -20px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .bn-fab:active { transform: scale(0.93); }
+}
 </style>
