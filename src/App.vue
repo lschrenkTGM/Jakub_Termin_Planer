@@ -89,8 +89,7 @@
     </main>
 
     <!-- ── MOBILE UPCOMING DRAWER ── -->
-    <transition name="drawer">
-      <div v-if="upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
+    <div v-if="upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
         <div class="drawer">
           <div class="drawer-handle"></div>
           <div class="drawer-header">
@@ -139,8 +138,7 @@
             </div>
           </div>
         </div>
-      </div>
-    </transition>
+    </div>
 
     <!-- ── MOBILE BOTTOM NAV ── -->
     <nav class="bottom-nav">
@@ -279,6 +277,62 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
 .up-title { font-size: 0.88rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .up-meta { font-size: 0.72rem; color: var(--text-2); }
 
+/* ── UPCOMING DRAWER (always available, shown via v-if) ── */
+.drawer-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(32,33,36,.45);
+  z-index: 100;
+  display: flex; align-items: flex-end;
+  animation: backdropIn 0.2s ease;
+}
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+.drawer {
+  width: 100%;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  animation: drawerUp 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes drawerUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.drawer-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
+}
+.drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem 0.5rem; flex-shrink: 0;
+}
+.drawer-header h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; color: var(--text); }
+.drawer-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--bg); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.drawer-stats { display: flex; gap: 0.5rem; padding: 0.25rem 1.25rem 0.75rem; flex-shrink: 0; }
+.drawer-body { overflow-y: auto; flex: 1; padding: 0 0.75rem 0.5rem; }
+.drawer-loading { padding: 2rem 0; text-align: center; color: var(--text-3); font-size: 0.85rem; }
+.drawer-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 2rem 0; color: var(--text-3); font-size: 0.85rem;
+}
+.drawer-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0.85rem 0.5rem; border-radius: var(--radius-s);
+  cursor: pointer; transition: background 0.13s;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-item:last-child { border-bottom: none; }
+.drawer-item:active { background: var(--bg); }
+.drawer-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.drawer-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.drawer-item-title { font-size: 0.95rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drawer-item-meta { font-size: 0.75rem; color: var(--text-2); }
+.drawer-arrow { color: var(--text-3); flex-shrink: 0; }
+
 /* ── MOBILE HEADER ── */
 .mobile-header { display: none; }
 
@@ -356,67 +410,5 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
   }
   .bn-fab:active { transform: scale(0.93); }
 
-  /* ── UPCOMING DRAWER ── */
-  .drawer-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(32,33,36,.4);
-    z-index: 50;
-    display: flex; align-items: flex-end;
-  }
-  .drawer {
-    width: 100%;
-    background: var(--surface);
-    border-radius: 20px 20px 0 0;
-    max-height: 80vh;
-    display: flex; flex-direction: column;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-  .drawer-handle {
-    width: 36px; height: 4px; background: var(--border);
-    border-radius: 2px; margin: 12px auto 0;
-    flex-shrink: 0;
-  }
-  .drawer-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 1.25rem 0.5rem;
-    flex-shrink: 0;
-  }
-  .drawer-header h3 {
-    font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; color: var(--text);
-  }
-  .drawer-close {
-    width: 32px; height: 32px; border-radius: 50%; border: none;
-    background: var(--bg); color: var(--text-2);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .drawer-stats {
-    display: flex; gap: 0.5rem; padding: 0.5rem 1.25rem 0.75rem; flex-shrink: 0;
-  }
-  .drawer-body {
-    overflow-y: auto; flex: 1; padding: 0 0.75rem 0.5rem;
-  }
-  .drawer-loading, .drawer-empty {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 2rem 0; color: var(--text-3); font-size: 0.85rem;
-  }
-  .drawer-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 0.85rem 0.75rem; border-radius: var(--radius-s);
-    cursor: pointer; transition: background 0.13s;
-    border-bottom: 1px solid var(--border);
-  }
-  .drawer-item:last-child { border-bottom: none; }
-  .drawer-item:active { background: var(--bg); }
-  .drawer-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .drawer-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
-  .drawer-item-title { font-size: 0.95rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .drawer-item-meta { font-size: 0.75rem; color: var(--text-2); }
-  .drawer-arrow { color: var(--text-3); flex-shrink: 0; }
-
-  /* Drawer transition */
-  .drawer-enter-active, .drawer-leave-active { transition: opacity 0.25s ease; }
-  .drawer-enter-active .drawer, .drawer-leave-active .drawer { transition: transform 0.28s cubic-bezier(0.16,1,0.3,1); }
-  .drawer-enter-from, .drawer-leave-to { opacity: 0; }
-  .drawer-enter-from .drawer, .drawer-leave-to .drawer { transform: translateY(100%); }
 }
 </style>
