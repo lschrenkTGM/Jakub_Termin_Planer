@@ -56,7 +56,7 @@
             <div class="event-actions">
               <!-- Accept button (Jakub + Admin) -->
               <button
-                v-if="canAccept(username) && !appt.accepted_by"
+                v-if="canAccept(userRole) && !appt.accepted_by"
                 class="action-btn accept-btn"
                 title="Termin akzeptieren"
                 @click.stop="handleAccept(appt.id)"
@@ -67,7 +67,7 @@
               </button>
               <!-- Unaccept (Admin only) -->
               <button
-                v-if="getRole(username) === 'admin' && appt.accepted_by"
+                v-if="userRole === 'admin' && appt.accepted_by"
                 class="action-btn unaccept-btn"
                 title="Akzeptierung zurückziehen"
                 @click.stop="handleUnaccept(appt.id)"
@@ -78,7 +78,7 @@
               </button>
               <!-- Edit (own or admin) -->
               <button
-                v-if="canEdit(username, appt)"
+                v-if="canEdit(username, appt, userRole)"
                 class="action-btn edit-btn"
                 title="Bearbeiten"
                 @click.stop="openModal(appt, null)"
@@ -113,9 +113,9 @@
 import { computed, reactive } from 'vue'
 import AppointmentModal from './AppointmentModal.vue'
 import { useAppointments } from '../composables/useAppointments.js'
-import { getRole, canEdit, canAccept } from '../config/users.js'
+import { canEdit, canAccept } from '../config/users.js'
 
-const props = defineProps({ dateStr: String, username: String })
+const props = defineProps({ dateStr: String, username: String, userRole: String })
 defineEmits(['back'])
 
 const { getForDate, addAppointment, updateAppointment, deleteAppointment, acceptAppointment, unacceptAppointment } = useAppointments()
