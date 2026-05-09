@@ -194,4 +194,21 @@ button { padding: 0.6rem 1.1rem; border-radius: var(--radius-s); font-size: 0.88
 .btn-ghost:hover { background: #e8e8e8; }
 .btn-delete { display: flex; align-items: center; gap: 5px; background: #fce8e6; color: #c5221f; }
 .btn-delete:hover { background: #fad2cf; }
+
+@media (max-width: 768px) {
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.28s cubic-bezier(0.16,1,0.3,1);
+    padding-bottom: max(1.75rem, env(safe-area-inset-bottom));
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .two-col { grid-template-columns: 1fr 1fr; }
+}
 </style>
