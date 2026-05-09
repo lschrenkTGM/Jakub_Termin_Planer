@@ -24,7 +24,7 @@
       </button>
     </div>
 
-    <div class="timeline" ref="timelineEl">
+    <div class="timeline">
       <!-- Grid rows (click targets) -->
       <div class="grid-layer">
         <div
@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import AppointmentModal from './AppointmentModal.vue'
 import { useAppointments } from '../composables/useAppointments.js'
 import { canEdit, canAccept } from '../config/users.js'
@@ -126,12 +126,10 @@ import { canEdit, canAccept } from '../config/users.js'
 const props = defineProps({ dateStr: String, username: String, userRole: String })
 defineEmits(['back'])
 
-const ROW_H = 60 // px per hour (must match CSS)
-const LABEL_W = 64 // px label column width (must match CSS)
+const ROW_H = 60 // px per hour — must match CSS .hour-row height
 
 const { getForDate, addAppointment, updateAppointment, deleteAppointment, acceptAppointment, unacceptAppointment } = useAppointments()
 const hours = Array.from({ length: 24 }, (_, i) => i)
-const timelineEl = ref(null)
 
 const dayAppointments = computed(() => getForDate(props.dateStr))
 
@@ -148,22 +146,86 @@ const monthYear = computed(() => d.value.toLocaleDateString('de-DE', { month: 'l
 
 const modal = reactive({ open: false, editing: null, prefillTime: null })
 
-function toMinutes(timeStr) {
+// ── Time helpers ──────────────────────────────────────────────────────────────
+
+function toMin(timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
   return h * 60 + (m || 0)
 }
 
+function apptRange(appt) {
+  const start = toMin(appt.time)
+  let end = appt.end_time ? toMin(appt.end_time) : start + 60
+  // Past-midnight: e.g. start=18:00 (1080), end=03:00 (180) → end becomes 1620
+  if (end <= start) end += 24 * 60
+  // Cap at 24 h past start; also never exceed end of day (1440)
+  end = Math.min(end, Math.min(start + 24 * 60, 1440))
+  return { start, end }
+}
+
+// ── Column layout (greedy interval coloring) ──────────────────────────────────
+
+const columnLayout = computed(() => {
+  const appts = dayAppointments.value
+  if (!appts.length) return {}
+
+  // Sort by start time
+  const sorted = [...appts].sort((a, b) => toMin(a.time) - toMin(b.time))
+
+  // columns[c] = max end minute currently in that column
+  const colEnds = []
+  const placement = {} // id → { col }
+
+  for (const appt of sorted) {
+    const { start, end } = apptRange(appt)
+    // Find first column whose last event has ended
+    let placed = -1
+    for (let c = 0; c < colEnds.length; c++) {
+      if (colEnds[c] <= start) { placed = c; break }
+    }
+    if (placed === -1) { placed = colEnds.length; colEnds.push(0) }
+    colEnds[placed] = end
+    placement[appt.id] = { col: placed }
+  }
+
+  // For each appointment, totalCols = widest group that overlaps it
+  const result = {}
+  for (const appt of sorted) {
+    const { start, end } = apptRange(appt)
+    let maxCol = placement[appt.id].col
+    for (const other of sorted) {
+      if (other.id === appt.id) continue
+      const { start: os, end: oe } = apptRange(other)
+      if (os < end && oe > start) maxCol = Math.max(maxCol, placement[other.id].col)
+    }
+    result[appt.id] = { col: placement[appt.id].col, totalCols: maxCol + 1 }
+  }
+  return result
+})
+
+// ── Event positioning style ───────────────────────────────────────────────────
+
 function eventStyle(appt) {
-  const startMin = toMinutes(appt.time)
-  let endMin = appt.end_time ? toMinutes(appt.end_time) : startMin + 60
-  const durationMin = Math.max(endMin - startMin, 30)
+  const { start, end } = apptRange(appt)
+  const durationMin = Math.max(end - start, 30) // minimum 30 min visual height
+  const { col = 0, totalCols = 1 } = columnLayout.value[appt.id] || {}
+
+  const gutter = 4 // px gap between columns
+  const pct = 100 / totalCols
+  const left = `calc(${col * pct}% + ${gutter / 2}px)`
+  const width = `calc(${pct}% - ${gutter}px)`
+
   return {
-    top: `${startMin / 60 * ROW_H}px`,
-    height: `${durationMin / 60 * ROW_H - 4}px`,
+    top: `${start / 60 * ROW_H}px`,
+    height: `${durationMin / 60 * ROW_H - 3}px`,
+    left,
+    width,
     borderLeftColor: appt.color || '#1a73e8',
     background: hexToRgba(appt.color || '#1a73e8', 0.08),
   }
 }
+
+// ── Modal handlers ────────────────────────────────────────────────────────────
 
 function openModal(appt, time) {
   modal.editing = appt || null
@@ -196,6 +258,7 @@ function hexToRgba(hex, alpha) {
 <style scoped>
 .day-view { display: flex; flex-direction: column; height: 100%; background: var(--surface); }
 
+/* ── Header ── */
 .dv-header {
   display: flex; align-items: center; gap: 1rem;
   padding: 0.9rem 1.5rem; border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -224,61 +287,67 @@ function hexToRgba(hex, alpha) {
 }
 .add-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
 
-/* Timeline: scrollable, relative for event overlay */
-.timeline { flex: 1; overflow-y: auto; position: relative; }
+/* ── Timeline ── */
+.timeline {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  position: relative;
+}
 
-/* Grid layer */
-.grid-layer { }
+/* Grid */
+.grid-layer {}
 .hour-row {
   display: flex; align-items: flex-start;
-  height: 60px; border-bottom: 1px solid #f1f3f4;
+  height: 60px; /* ROW_H — keep in sync with JS constant */
+  border-bottom: 1px solid #f1f3f4;
   cursor: pointer;
 }
 .hour-row:hover .slot-hint { opacity: 1; }
 .hour-label {
   width: 64px; flex-shrink: 0;
-  padding: 0.45rem 0.75rem 0;
+  padding: 0.4rem 0.75rem 0;
   font-size: 0.7rem; font-weight: 600; color: var(--text-3); text-align: right; line-height: 1;
 }
-.hour-slot { flex: 1; padding: 0.4rem 0.75rem; }
-.slot-hint { font-size: 0.72rem; color: var(--text-3); opacity: 0; transition: opacity 0.15s; }
+.hour-slot { flex: 1; padding: 0.3rem 0.5rem; }
+.slot-hint { font-size: 0.72rem; color: var(--text-3); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
 
-/* Events overlay */
+/* Events overlay — left aligns with the hour-slot area */
 .events-layer {
   position: absolute;
   top: 0; left: 64px; right: 0;
   pointer-events: none;
+  padding: 0 6px;
 }
 
 .event-block {
   position: absolute;
-  left: 8px; right: 8px;
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 0.35rem 0.65rem;
+  box-sizing: border-box;
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 0.3rem 0.5rem;
   border-left: 3px solid;
-  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  border-radius: 0 6px 6px 0;
   overflow: hidden;
   pointer-events: auto;
   cursor: default;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+  min-width: 0;
 }
-.event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-.event-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; }
-.event-top-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.event-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-.event-creator-badge { font-size: 0.68rem; background: rgba(0,0,0,.07); border-radius: 20px; padding: 1px 7px; color: var(--text-2); white-space: nowrap; }
-.event-time { font-size: 0.72rem; color: var(--text-2); }
+.event-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.event-info { flex: 1; display: flex; flex-direction: column; gap: 1px; overflow: hidden; min-width: 0; }
+.event-top-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+.event-title { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-creator-badge { font-size: 0.65rem; background: rgba(0,0,0,.07); border-radius: 20px; padding: 1px 6px; color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
+.event-time { font-size: 0.68rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .accepted-tag {
   display: flex; align-items: center; gap: 4px;
-  font-size: 0.7rem; color: #34a853; font-weight: 600;
+  font-size: 0.65rem; color: #34a853; font-weight: 600;
   background: #e6f4ea; border-radius: 20px;
-  padding: 2px 8px; margin-top: 2px; width: fit-content;
+  padding: 2px 6px; margin-top: 2px; width: fit-content;
 }
 
-.event-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.event-actions { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 .action-btn {
-  width: 28px; height: 28px; border-radius: 50%; border: none;
+  width: 26px; height: 26px; border-radius: 50%; border: none;
   display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.13s;
 }
 .accept-btn { background: #e6f4ea; color: #34a853; }
@@ -288,15 +357,19 @@ function hexToRgba(hex, alpha) {
 .edit-btn { background: var(--blue-light); color: var(--blue); }
 .edit-btn:hover { background: #d2e3fc; }
 
+/* ── Mobile ── */
 @media (max-width: 768px) {
   .dv-header { padding: 0.65rem 0.75rem; gap: 0.6rem; }
   .dv-title { font-size: 0.9rem; }
   .add-btn span { display: none; }
   .add-btn { padding: 0.55rem 0.75rem; border-radius: 50%; }
-  .hour-row { height: 52px; }
-  .hour-label { width: 46px; font-size: 0.62rem; padding: 0.4rem 0.4rem 0; }
-  .hour-slot { padding: 0.3rem 0.5rem; }
+  .hour-label { width: 46px; font-size: 0.6rem; padding: 0.35rem 0.4rem 0; }
+  .hour-slot { padding: 0.2rem 0.4rem; }
   .slot-hint { display: none; }
-  .events-layer { left: 46px; }
+  .events-layer { left: 46px; padding: 0 3px; }
+  .event-block { padding: 0.25rem 0.4rem; gap: 4px; }
+  .event-title { font-size: 0.75rem; }
+  .event-creator-badge { display: none; }
+  .action-btn { width: 24px; height: 24px; }
 }
 </style>
