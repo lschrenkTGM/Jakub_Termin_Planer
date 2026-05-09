@@ -49,6 +49,25 @@
             @focus="focuses.desc=true" @blur="focuses.desc=false" />
         </div>
 
+        <!-- Recurring toggle (only when creating) -->
+        <label v-if="!editing" class="recurring-toggle">
+          <div class="toggle-switch" :class="{ on: form.recurring }" @click="form.recurring = !form.recurring">
+            <div class="toggle-thumb"></div>
+          </div>
+          <div class="toggle-label">
+            <span class="toggle-title">Wöchentlich wiederholen</span>
+            <span class="toggle-sub">Erstellt 52 Termine (1 Jahr)</span>
+          </div>
+        </label>
+
+        <!-- Recurring badge when editing a recurring appointment -->
+        <div v-if="editing && editing.recurring_group_id" class="recurring-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Wöchentlich wiederkehrender Termin
+        </div>
+
         <!-- Color picker -->
         <div class="color-row">
           <span class="color-label">Farbe</span>
@@ -66,12 +85,25 @@
         </div>
 
         <div class="modal-actions">
-          <button v-if="editing" type="button" class="btn-delete" @click="$emit('delete', editing.id)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Löschen
-          </button>
+          <template v-if="editing">
+            <button type="button" class="btn-delete" @click="$emit('delete', editing.id)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Löschen
+            </button>
+            <button
+              v-if="editing.recurring_group_id"
+              type="button"
+              class="btn-delete-series"
+              @click="$emit('delete-series', editing.recurring_group_id)"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Serie löschen
+            </button>
+          </template>
           <div class="spacer" />
           <button type="button" class="btn-ghost" @click="$emit('close')">Abbrechen</button>
           <button type="submit" class="btn-primary">Speichern</button>
@@ -90,14 +122,14 @@ const props = defineProps({
   editing: Object,
   username: String,
 })
-const emit = defineEmits(['close', 'save', 'delete'])
+const emit = defineEmits(['close', 'save', 'delete', 'delete-series'])
 
 const colors = ['#1a73e8','#34a853','#ea4335','#fbbc04','#ff6d00','#9c27b0','#00bcd4','#795548']
 
 const focuses = reactive({ title: false, date: false, time: false, endTime: false, location: false, desc: false })
 const form = reactive({
   title: '', date: props.prefillDate || '', time: props.prefillTime || '',
-  endTime: '', description: '', location: '', color: '#1a73e8',
+  endTime: '', description: '', location: '', color: '#1a73e8', recurring: false,
 })
 
 watch(() => props.editing, (appt) => {
@@ -110,6 +142,7 @@ watch(() => props.editing, (appt) => {
       description: appt.description || '',
       location: appt.location || '',
       color: appt.color || '#1a73e8',
+      recurring: false,
     })
   }
 }, { immediate: true })
@@ -173,6 +206,41 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
+/* Recurring toggle */
+.recurring-toggle {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius-s);
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.recurring-toggle:hover { border-color: var(--blue); background: var(--blue-light); }
+
+.toggle-switch {
+  width: 40px; height: 22px; border-radius: 11px; background: var(--border);
+  position: relative; flex-shrink: 0; transition: background 0.2s; cursor: pointer;
+}
+.toggle-switch.on { background: var(--blue); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-switch.on .toggle-thumb { transform: translateX(18px); }
+
+.toggle-label { display: flex; flex-direction: column; gap: 1px; }
+.toggle-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.toggle-sub { font-size: 0.72rem; color: var(--text-2); }
+
+/* Recurring badge */
+.recurring-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0.4rem 0.75rem;
+  background: #e8f0fe; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 600; color: var(--blue);
+  align-self: flex-start;
+}
+
 /* Color picker */
 .color-row { display: flex; align-items: center; gap: 0.75rem; }
 .color-label { font-size: 0.8rem; font-weight: 600; color: var(--text-2); white-space: nowrap; }
@@ -184,7 +252,7 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
 .swatch:hover { transform: scale(1.15); }
 .swatch.active { border-color: var(--text); transform: scale(1.15); }
 
-.modal-actions { display: flex; align-items: center; gap: 0.6rem; padding-top: 0.25rem; }
+.modal-actions { display: flex; align-items: center; gap: 0.6rem; padding-top: 0.25rem; flex-wrap: wrap; }
 .spacer { flex: 1; }
 
 button { padding: 0.6rem 1.1rem; border-radius: var(--radius-s); font-size: 0.88rem; font-weight: 600; border: none; transition: all 0.13s; }
@@ -194,6 +262,8 @@ button { padding: 0.6rem 1.1rem; border-radius: var(--radius-s); font-size: 0.88
 .btn-ghost:hover { background: #e8e8e8; }
 .btn-delete { display: flex; align-items: center; gap: 5px; background: #fce8e6; color: #c5221f; }
 .btn-delete:hover { background: #fad2cf; }
+.btn-delete-series { display: flex; align-items: center; gap: 5px; background: #fce8e6; color: #c5221f; }
+.btn-delete-series:hover { background: #fad2cf; }
 
 @media (max-width: 768px) {
   .modal-backdrop { align-items: flex-end; padding: 0; }

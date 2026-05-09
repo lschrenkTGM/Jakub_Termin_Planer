@@ -69,6 +69,9 @@
           <div class="event-info">
             <div class="event-top-row">
               <span class="event-title">{{ appt.title }}</span>
+              <svg v-if="appt.recurring_group_id" class="recur-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" title="Wiederkehrend">
+                <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <span class="event-creator-badge">{{ appt.created_by }}</span>
             </div>
             <span class="event-time">
@@ -153,6 +156,16 @@
               </div>
             </div>
 
+            <!-- Recurring -->
+            <div v-if="detail.recurring_group_id" class="detail-row">
+              <div class="detail-icon recurring-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="detail-val">Wöchentlich wiederkehrend</span>
+            </div>
+
             <!-- Accepted -->
             <div v-if="detail.accepted_by" class="detail-row">
               <div class="detail-icon accepted-icon">
@@ -169,6 +182,16 @@
 
           <!-- Action buttons -->
           <div class="detail-actions">
+            <button
+              v-if="detail.recurring_group_id && canEdit(username, detail, userRole)"
+              class="detail-btn btn-delete-series"
+              @click="doDeleteSeries"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Serie löschen
+            </button>
             <button
               v-if="canAccept(userRole) && !detail.accepted_by"
               class="detail-btn btn-accept"
@@ -216,6 +239,7 @@
       @close="modal.open = false"
       @save="handleSave"
       @delete="handleDelete"
+      @delete-series="handleDeleteSeries"
     />
   </div>
 </template>
@@ -231,7 +255,7 @@ const emit = defineEmits(['back', 'navigate'])
 
 const ROW_H = 60 // px per hour — must match CSS .hour-row height
 
-const { getForDate, addAppointment, updateAppointment, deleteAppointment, acceptAppointment, unacceptAppointment } = useAppointments()
+const { getForDate, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment } = useAppointments()
 const hours = Array.from({ length: 24 }, (_, i) => i)
 
 const dayAppointments = computed(() => getForDate(props.dateStr))
@@ -350,6 +374,12 @@ function editFromDetail() {
   openModal(appt, null)
 }
 
+async function doDeleteSeries() {
+  if (!confirm('Alle Termine dieser Serie löschen?')) return
+  await deleteRecurringGroup(detail.value.recurring_group_id)
+  detail.value = null
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 const modal = reactive({ open: false, editing: null, prefillTime: null })
@@ -366,6 +396,13 @@ async function handleSave(data) {
 }
 async function handleDelete(id) {
   await deleteAppointment(id)
+  modal.open = false
+  detail.value = null
+}
+
+async function handleDeleteSeries(groupId) {
+  if (!confirm('Alle Termine dieser Serie löschen?')) return
+  await deleteRecurringGroup(groupId)
   modal.open = false
   detail.value = null
 }
@@ -470,6 +507,7 @@ function hexToRgba(hex, alpha) {
   font-size: 0.62rem; color: #34a853; font-weight: 600;
   background: #e6f4ea; border-radius: 20px; padding: 1px 5px; width: fit-content;
 }
+.recur-icon { color: var(--text-3); flex-shrink: 0; }
 
 /* ── Detail Sheet ── */
 .detail-backdrop {
@@ -519,6 +557,7 @@ function hexToRgba(hex, alpha) {
   color: var(--text-2); flex-shrink: 0;
 }
 .accepted-icon { background: #e6f4ea; color: #34a853; }
+.recurring-icon { background: #e8f0fe; color: var(--blue); }
 .detail-row-text { display: flex; flex-direction: column; gap: 1px; }
 .detail-val { font-size: 0.9rem; font-weight: 500; color: var(--text); }
 .detail-sub { font-size: 0.75rem; color: var(--text-2); }
@@ -537,6 +576,8 @@ function hexToRgba(hex, alpha) {
 .btn-unaccept:hover { background: #fad2cf; }
 .btn-edit { background: var(--blue-light); color: var(--blue); }
 .btn-edit:hover { background: #d2e3fc; }
+.btn-delete-series { background: #fce8e6; color: #c5221f; }
+.btn-delete-series:hover { background: #fad2cf; }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
