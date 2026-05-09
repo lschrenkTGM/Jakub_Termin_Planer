@@ -119,6 +119,7 @@
       @close="globalModal = false"
       @save="handleGlobalSave"
       @delete="handleGlobalDelete"
+      @delete-series="handleGlobalDeleteSeries"
     />
   </div>
 
@@ -216,7 +217,7 @@ function logout() {
   selectedDay.value = null
 }
 
-const { appointments, loading, addAppointment, deleteAppointment, getCountForDate } = useAppointments()
+const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup, getCountForDate } = useAppointments()
 
 const selectedDay = ref(null)
 const globalModal = ref(false)
@@ -245,6 +246,11 @@ function goToday() { selectedDay.value = todayStr }
 function openGlobalModal() { globalModal.value = true }
 async function handleGlobalSave(data) { await addAppointment(data); globalModal.value = false }
 async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal.value = false }
+async function handleGlobalDeleteSeries(groupId) {
+  if (!confirm('Alle Termine dieser Serie löschen?')) return
+  await deleteRecurringGroup(groupId)
+  globalModal.value = false
+}
 </script>
 
 <style scoped>
