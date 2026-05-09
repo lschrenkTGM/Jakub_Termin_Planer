@@ -84,7 +84,7 @@
 
     <!-- ── MAIN CONTENT ── -->
     <main class="main">
-      <DayView v-if="selectedDay" :date-str="selectedDay" :username="username" @back="selectedDay = null" />
+      <DayView v-if="selectedDay" :date-str="selectedDay" :username="username" :user-role="userRole" @back="selectedDay = null" />
       <MonthCalendar v-else @select-day="selectDay" />
     </main>
 
@@ -175,24 +175,44 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import LoginScreen from './components/LoginScreen.vue'
 import MonthCalendar from './components/MonthCalendar.vue'
 import DayView from './components/DayView.vue'
 import AppointmentModal from './components/AppointmentModal.vue'
 import { useAppointments } from './composables/useAppointments.js'
-import { getRole } from './config/users.js'
+import { loadUsers, verifyLogin } from './composables/useAuth.js'
 
-const username = ref(sessionStorage.getItem('tp_user') || '')
+const username = ref('')
+const userRole = ref('')
 
-function handleLogin(name) {
+onMounted(async () => {
+  const storedUser = sessionStorage.getItem('tp_user')
+  const storedPass = sessionStorage.getItem('tp_pass')
+  if (storedUser && storedPass) {
+    await loadUsers()
+    const user = await verifyLogin(storedUser, storedPass)
+    if (user) {
+      username.value = user.name
+      userRole.value = user.role
+    } else {
+      sessionStorage.clear()
+    }
+  }
+})
+
+function handleLogin({ name, role, password }) {
   sessionStorage.setItem('tp_user', name)
+  sessionStorage.setItem('tp_role', role)
+  sessionStorage.setItem('tp_pass', password)
   username.value = name
+  userRole.value = role
 }
 function logout() {
   if (!confirm(`Als "${username.value}" abmelden?`)) return
-  sessionStorage.removeItem('tp_user')
+  sessionStorage.clear()
   username.value = ''
+  userRole.value = ''
   selectedDay.value = null
 }
 
