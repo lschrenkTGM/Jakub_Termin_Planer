@@ -24,73 +24,81 @@
       </button>
     </div>
 
-    <div class="timeline">
-      <div v-for="hour in hours" :key="hour" class="hour-row">
-        <span class="hour-label">{{ String(hour).padStart(2,'00') }}:00</span>
-        <div class="hour-slot" @click="openModal(null, String(hour).padStart(2,'00') + ':00')">
-          <div
-            v-for="appt in getApptForHour(hour)"
-            :key="appt.id"
-            class="event-block"
-            :style="{ borderLeftColor: appt.color || '#1a73e8', background: hexToRgba(appt.color || '#1a73e8', 0.08) }"
-            @click.stop
-          >
-            <div class="event-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
-            <div class="event-info">
-              <div class="event-top-row">
-                <span class="event-title">{{ appt.title }}</span>
-                <span class="event-creator-badge">{{ appt.created_by }}</span>
-              </div>
-              <span class="event-time">
-                {{ appt.time }}{{ appt.end_time ? ' – ' + appt.end_time : '' }}
-                {{ appt.location ? ' · ' + appt.location : '' }}
-              </span>
-              <!-- Accepted status -->
-              <div v-if="appt.accepted_by" class="accepted-tag">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Akzeptiert von {{ appt.accepted_by }} · {{ formatAcceptedAt(appt.accepted_at) }}
-              </div>
+    <div class="timeline" ref="timelineEl">
+      <!-- Grid rows (click targets) -->
+      <div class="grid-layer">
+        <div
+          v-for="hour in hours"
+          :key="hour"
+          class="hour-row"
+          @click="openModal(null, String(hour).padStart(2,'0') + ':00')"
+        >
+          <span class="hour-label">{{ String(hour).padStart(2,'0') }}:00</span>
+          <div class="hour-slot">
+            <div class="slot-hint">+ Termin hinzufügen</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Absolutely positioned events layer -->
+      <div class="events-layer">
+        <div
+          v-for="appt in dayAppointments"
+          :key="appt.id"
+          class="event-block"
+          :style="eventStyle(appt)"
+          @click.stop
+        >
+          <div class="event-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
+          <div class="event-info">
+            <div class="event-top-row">
+              <span class="event-title">{{ appt.title }}</span>
+              <span class="event-creator-badge">{{ appt.created_by }}</span>
             </div>
-            <div class="event-actions">
-              <!-- Accept button (Jakub + Admin) -->
-              <button
-                v-if="canAccept(userRole) && !appt.accepted_by"
-                class="action-btn accept-btn"
-                title="Termin akzeptieren"
-                @click.stop="handleAccept(appt.id)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <!-- Unaccept (Admin only) -->
-              <button
-                v-if="userRole === 'admin' && appt.accepted_by"
-                class="action-btn unaccept-btn"
-                title="Akzeptierung zurückziehen"
-                @click.stop="handleUnaccept(appt.id)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
-              <!-- Edit (own or admin) -->
-              <button
-                v-if="canEdit(username, appt, userRole)"
-                class="action-btn edit-btn"
-                title="Bearbeiten"
-                @click.stop="openModal(appt, null)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
+            <span class="event-time">
+              {{ appt.time }}{{ appt.end_time ? ' – ' + appt.end_time : '' }}
+              {{ appt.location ? ' · ' + appt.location : '' }}
+            </span>
+            <div v-if="appt.accepted_by" class="accepted-tag">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Akzeptiert von {{ appt.accepted_by }} · {{ formatAcceptedAt(appt.accepted_at) }}
             </div>
           </div>
-          <div v-if="!getApptForHour(hour).length" class="slot-hint">+ Termin hinzufügen</div>
+          <div class="event-actions">
+            <button
+              v-if="canAccept(userRole) && !appt.accepted_by"
+              class="action-btn accept-btn"
+              title="Termin akzeptieren"
+              @click.stop="handleAccept(appt.id)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button
+              v-if="userRole === 'admin' && appt.accepted_by"
+              class="action-btn unaccept-btn"
+              title="Akzeptierung zurückziehen"
+              @click.stop="handleUnaccept(appt.id)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button
+              v-if="canEdit(username, appt, userRole)"
+              class="action-btn edit-btn"
+              title="Bearbeiten"
+              @click.stop="openModal(appt, null)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -101,7 +109,7 @@
       :prefill-time="modal.prefillTime"
       :editing="modal.editing"
       :username="username"
-      :user-role="getRole(username)"
+      :user-role="userRole"
       @close="modal.open = false"
       @save="handleSave"
       @delete="handleDelete"
@@ -110,7 +118,7 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import AppointmentModal from './AppointmentModal.vue'
 import { useAppointments } from '../composables/useAppointments.js'
 import { canEdit, canAccept } from '../config/users.js'
@@ -118,11 +126,14 @@ import { canEdit, canAccept } from '../config/users.js'
 const props = defineProps({ dateStr: String, username: String, userRole: String })
 defineEmits(['back'])
 
+const ROW_H = 60 // px per hour (must match CSS)
+const LABEL_W = 64 // px label column width (must match CSS)
+
 const { getForDate, addAppointment, updateAppointment, deleteAppointment, acceptAppointment, unacceptAppointment } = useAppointments()
 const hours = Array.from({ length: 24 }, (_, i) => i)
+const timelineEl = ref(null)
 
 const dayAppointments = computed(() => getForDate(props.dateStr))
-const getApptForHour = (h) => dayAppointments.value.filter(a => parseInt(a.time.split(':')[0]) === h)
 
 const d = computed(() => new Date(props.dateStr + 'T00:00:00'))
 const today = new Date()
@@ -136,6 +147,23 @@ const dayNum    = computed(() => d.value.getDate())
 const monthYear = computed(() => d.value.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }))
 
 const modal = reactive({ open: false, editing: null, prefillTime: null })
+
+function toMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
+function eventStyle(appt) {
+  const startMin = toMinutes(appt.time)
+  let endMin = appt.end_time ? toMinutes(appt.end_time) : startMin + 60
+  const durationMin = Math.max(endMin - startMin, 30)
+  return {
+    top: `${startMin / 60 * ROW_H}px`,
+    height: `${durationMin / 60 * ROW_H - 4}px`,
+    borderLeftColor: appt.color || '#1a73e8',
+    background: hexToRgba(appt.color || '#1a73e8', 0.08),
+  }
+}
 
 function openModal(appt, time) {
   modal.editing = appt || null
@@ -196,22 +224,46 @@ function hexToRgba(hex, alpha) {
 }
 .add-btn:hover { background: var(--blue-hover); transform: translateY(-1px); }
 
-.timeline { flex: 1; overflow-y: auto; }
-.hour-row { display: flex; align-items: stretch; min-height: 60px; border-bottom: 1px solid #f1f3f4; }
-.hour-label { width: 64px; flex-shrink: 0; padding: 0.65rem 0.75rem 0; font-size: 0.7rem; font-weight: 600; color: var(--text-3); text-align: right; line-height: 1; }
-.hour-slot { flex: 1; padding: 0.4rem 0.75rem; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.1s; }
-.hour-slot:hover { background: #fafbff; }
-.hour-slot:hover .slot-hint { opacity: 1; }
-.slot-hint { font-size: 0.72rem; color: var(--text-3); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+/* Timeline: scrollable, relative for event overlay */
+.timeline { flex: 1; overflow-y: auto; position: relative; }
+
+/* Grid layer */
+.grid-layer { }
+.hour-row {
+  display: flex; align-items: flex-start;
+  height: 60px; border-bottom: 1px solid #f1f3f4;
+  cursor: pointer;
+}
+.hour-row:hover .slot-hint { opacity: 1; }
+.hour-label {
+  width: 64px; flex-shrink: 0;
+  padding: 0.45rem 0.75rem 0;
+  font-size: 0.7rem; font-weight: 600; color: var(--text-3); text-align: right; line-height: 1;
+}
+.hour-slot { flex: 1; padding: 0.4rem 0.75rem; }
+.slot-hint { font-size: 0.72rem; color: var(--text-3); opacity: 0; transition: opacity 0.15s; }
+
+/* Events overlay */
+.events-layer {
+  position: absolute;
+  top: 0; left: 64px; right: 0;
+  pointer-events: none;
+}
 
 .event-block {
+  position: absolute;
+  left: 8px; right: 8px;
   display: flex; align-items: flex-start; gap: 8px;
-  padding: 0.5rem 0.65rem;
-  border-left: 3px solid; border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  padding: 0.35rem 0.65rem;
+  border-left: 3px solid;
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  overflow: hidden;
+  pointer-events: auto;
   cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 .event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-.event-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.event-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; }
 .event-top-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .event-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
 .event-creator-badge { font-size: 0.68rem; background: rgba(0,0,0,.07); border-radius: 20px; padding: 1px 7px; color: var(--text-2); white-space: nowrap; }
@@ -241,9 +293,10 @@ function hexToRgba(hex, alpha) {
   .dv-title { font-size: 0.9rem; }
   .add-btn span { display: none; }
   .add-btn { padding: 0.55rem 0.75rem; border-radius: 50%; }
-  .hour-label { width: 46px; font-size: 0.62rem; padding: 0.6rem 0.4rem 0; }
+  .hour-row { height: 52px; }
+  .hour-label { width: 46px; font-size: 0.62rem; padding: 0.4rem 0.4rem 0; }
   .hour-slot { padding: 0.3rem 0.5rem; }
-  .hour-row { min-height: 52px; }
   .slot-hint { display: none; }
+  .events-layer { left: 46px; }
 }
 </style>
