@@ -43,25 +43,56 @@
         <p v-if="pinError" class="error-msg">Falscher PIN. Bitte nochmal versuchen.</p>
       </template>
 
-      <!-- Step 2: Name -->
+      <!-- Step 2: User selection -->
+      <template v-else-if="step === 'user'">
+        <h1>Wer bist du?</h1>
+        <p class="subtitle">Wähle deinen Account.</p>
+        <div class="user-grid">
+          <button
+            v-for="(info, name) in USERS"
+            :key="name"
+            class="user-btn"
+            :class="{ selected: selectedUser === name }"
+            @click="selectedUser = name"
+          >
+            <div class="ub-avatar" :style="{ background: avatarColor(name) }">{{ name[0] }}</div>
+            <span class="ub-name">{{ name }}</span>
+            <span class="ub-role">{{ roleLabel(info.role) }}</span>
+          </button>
+        </div>
+        <button class="btn-login" :disabled="!selectedUser" @click="step = 'password'">
+          Weiter
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </template>
+
+      <!-- Step 3: Password -->
       <template v-else>
-        <h1>Willkommen!</h1>
-        <p class="subtitle">Wie heißt du? Dein Name wird bei Terminen angezeigt.</p>
-        <form @submit.prevent="submitName">
-          <div class="field" :class="{ focused, filled: name.length > 0 }">
-            <label>Dein Name</label>
+        <div class="back-row">
+          <button class="back-link" @click="step = 'user'; pwError = false">← Zurück</button>
+        </div>
+        <div class="pw-user">
+          <div class="ub-avatar big" :style="{ background: avatarColor(selectedUser) }">{{ selectedUser[0] }}</div>
+          <span>{{ selectedUser }}</span>
+        </div>
+        <form @submit.prevent="submitPassword">
+          <div class="field" :class="{ focused, filled: password.length > 0, error: pwError }">
+            <label>Passwort</label>
             <input
-              v-model="name"
-              type="text"
-              maxlength="40"
+              v-model="password"
+              type="password"
               required
               autofocus
               @focus="focused = true"
               @blur="focused = false"
+              @input="pwError = false"
             />
           </div>
-          <button type="submit" class="btn-login" :disabled="!name.trim()">
-            <span>Zum Kalender</span>
+          <p v-if="pwError" class="error-msg">Falsches Passwort.</p>
+          <button type="submit" class="btn-login" :disabled="!password">
+            Anmelden
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -74,20 +105,30 @@
 
 <script setup>
 import { ref, reactive, nextTick } from 'vue'
+import { USERS, PIN } from '../config/users.js'
 
-const CORRECT_PIN = '6767'
 const emit = defineEmits(['login'])
 
 const step = ref('pin')
 const pinDigits = reactive(['', '', '', ''])
 const pinInputs = ref([])
 const pinError = ref(false)
-const name = ref('')
+const selectedUser = ref('')
+const password = ref('')
+const pwError = ref(false)
 const focused = ref(false)
+
+const avatarColors = ['#1a73e8','#34a853','#ea4335','#fbbc04','#9c27b0']
+function avatarColor(name) {
+  const names = Object.keys(USERS)
+  return avatarColors[names.indexOf(name) % avatarColors.length]
+}
+function roleLabel(role) {
+  return role === 'admin' ? 'Admin' : role === 'acceptor' ? 'Akzeptant' : 'Mitglied'
+}
 
 function onPinInput(i) {
   const val = pinDigits[i]
-  // only allow digits
   if (!/^\d$/.test(val)) { pinDigits[i] = ''; return }
   pinError.value = false
   if (i < 3) nextTick(() => pinInputs.value[i + 1]?.focus())
@@ -100,109 +141,113 @@ function onPinBack(i) {
   }
 }
 function checkPin() {
-  const entered = pinDigits.join('')
-  if (entered === CORRECT_PIN) {
-    step.value = 'name'
+  if (pinDigits.join('') === PIN) {
+    step.value = 'user'
   } else {
     pinError.value = true
     pinDigits.forEach((_, i) => { pinDigits[i] = '' })
     nextTick(() => pinInputs.value[0]?.focus())
   }
 }
-function submitName() {
-  const n = name.value.trim()
-  if (n) emit('login', n)
+
+function submitPassword() {
+  if (password.value === USERS[selectedUser.value]?.password) {
+    emit('login', selectedUser.value)
+  } else {
+    pwError.value = true
+    password.value = ''
+  }
 }
 </script>
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f0f4ff;
-  position: relative;
-  overflow: hidden;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: #f0f4ff; position: relative; overflow: hidden;
 }
 .login-bg { position: absolute; inset: 0; pointer-events: none; }
 .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35; animation: drift 12s ease-in-out infinite; }
 .blob-1 { width: 500px; height: 500px; background: #1a73e8; top: -120px; left: -100px; }
 .blob-2 { width: 400px; height: 400px; background: #34a853; bottom: -80px; right: -80px; animation-delay: -4s; }
 .blob-3 { width: 300px; height: 300px; background: #fbbc04; top: 50%; left: 55%; animation-delay: -8s; }
-@keyframes drift {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33% { transform: translate(30px,-20px) scale(1.05); }
-  66% { transform: translate(-20px,15px) scale(0.97); }
-}
+@keyframes drift { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-20px) scale(1.05); } 66% { transform: translate(-20px,15px) scale(0.97); } }
 
 .login-card {
-  background: #fff;
-  border-radius: 24px;
-  padding: 2.75rem 2.5rem;
-  width: 100%;
-  max-width: 400px;
+  background: #fff; border-radius: 24px; padding: 2.5rem 2rem;
+  width: 100%; max-width: 420px;
   box-shadow: 0 20px 60px rgba(26,115,232,.12), 0 4px 16px rgba(0,0,0,.08);
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
   animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1);
 }
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 
-.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 1.75rem; }
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
 .brand-icon { width: 44px; height: 44px; background: #e8f0fe; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-.brand-name { font-family: var(--font-head); font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+.brand-name { font-family: var(--font-head); font-size: 1.25rem; font-weight: 800; color: var(--text); }
 
-h1 { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 0.4rem; letter-spacing: -0.5px; }
-.subtitle { font-size: 0.88rem; color: var(--text-2); line-height: 1.5; margin-bottom: 1.75rem; }
+h1 { font-family: var(--font-head); font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 0.4rem; }
+.subtitle { font-size: 0.88rem; color: var(--text-2); margin-bottom: 1.5rem; }
 
-.pin-row { display: flex; gap: 12px; justify-content: center; margin-bottom: 1rem; }
+/* PIN */
+.pin-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 1rem; }
 .pin-box {
-  width: 60px; height: 68px;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  font-family: var(--font-head);
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--text);
-  text-align: center;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  caret-color: transparent;
+  width: 58px; height: 66px; border: 2px solid var(--border); border-radius: 12px;
+  font-family: var(--font-head); font-size: 1.8rem; font-weight: 800; color: var(--text);
+  text-align: center; outline: none; transition: border-color 0.15s, box-shadow 0.15s; caret-color: transparent;
 }
 .pin-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
 .pin-box.error { border-color: #ea4335; animation: shake 0.35s ease; }
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20%,60% { transform: translateX(-6px); }
-  40%,80% { transform: translateX(6px); }
-}
-.error-msg { text-align: center; font-size: 0.8rem; color: #ea4335; font-weight: 600; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
 
-.field { position: relative; margin-bottom: 1.25rem; }
-.field label {
-  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  font-size: 0.9rem; color: var(--text-2); pointer-events: none;
-  transition: all 0.18s; background: #fff; padding: 0 4px;
+/* User grid */
+.user-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+.user-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0.75rem 1rem; border: 1.5px solid var(--border); border-radius: 12px;
+  background: #fff; cursor: pointer; transition: all 0.13s; text-align: left;
 }
-.field.focused label, .field.filled label { top: 0; font-size: 0.72rem; color: var(--blue); font-weight: 600; }
+.user-btn:hover { border-color: var(--blue); background: var(--blue-light); }
+.user-btn.selected { border-color: var(--blue); background: var(--blue-light); }
+.ub-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-family: var(--font-head); font-size: 1rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.ub-avatar.big { width: 48px; height: 48px; font-size: 1.3rem; }
+.ub-name { flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--text); }
+.ub-role { font-size: 0.72rem; color: var(--text-2); background: var(--bg); padding: 2px 8px; border-radius: 20px; }
+
+/* Password step */
+.back-row { margin-bottom: 1rem; }
+.back-link { background: none; border: none; font-size: 0.85rem; color: var(--blue); cursor: pointer; font-weight: 600; padding: 0; }
+.pw-user { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; color: var(--text); }
+
+/* Field */
+.field { position: relative; margin-bottom: 0.75rem; }
+.field label {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 0.88rem; color: var(--text-2); pointer-events: none;
+  transition: all 0.16s; background: #fff; padding: 0 4px;
+}
+.field.focused label, .field.filled label { top: 0; font-size: 0.7rem; color: var(--blue); font-weight: 600; }
+.field.error label { color: #ea4335; }
 .field input {
-  width: 100%; padding: 0.85rem 1rem;
-  border: 1.5px solid var(--border); border-radius: var(--radius-s);
-  font-size: 1rem; outline: none; transition: border-color 0.18s; background: transparent;
+  width: 100%; padding: 0.85rem 1rem; border: 1.5px solid var(--border);
+  border-radius: var(--radius-s); font-size: 1rem; outline: none; transition: border-color 0.16s; background: transparent;
 }
 .field.focused input { border-color: var(--blue); }
+.field.error input { border-color: #ea4335; }
+
+.error-msg { font-size: 0.8rem; color: #ea4335; font-weight: 600; margin-bottom: 0.5rem; }
 
 .btn-login {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 0.85rem; background: var(--blue); color: #fff; border: none;
   border-radius: var(--radius-s); font-size: 0.95rem; font-weight: 600;
-  box-shadow: 0 2px 8px rgba(26,115,232,.35);
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(26,115,232,.35); transition: background 0.15s, transform 0.1s;
+  margin-top: 0.25rem;
 }
-.btn-login:hover:not(:disabled) { background: var(--blue-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(26,115,232,.4); }
-.btn-login:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+.btn-login:hover:not(:disabled) { background: var(--blue-hover); transform: translateY(-1px); }
+.btn-login:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 </style>

@@ -88,58 +88,6 @@
       <MonthCalendar v-else @select-day="selectDay" />
     </main>
 
-    <!-- ── MOBILE UPCOMING DRAWER ── -->
-    <div v-if="upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
-        <div class="drawer">
-          <div class="drawer-handle"></div>
-          <div class="drawer-header">
-            <h3>Nächste Termine</h3>
-            <button class="drawer-close" @click="upcomingDrawer = false">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="drawer-stats">
-            <div class="stat-card">
-              <span class="stat-n">{{ todayCount }}</span>
-              <span class="stat-l">Heute</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-n">{{ totalCount }}</span>
-              <span class="stat-l">Gesamt</span>
-            </div>
-          </div>
-
-          <div class="drawer-body">
-            <div v-if="loading" class="drawer-loading">Lade Termine…</div>
-            <div v-else-if="upcoming.length === 0" class="drawer-empty">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" opacity=".25">
-                <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-              <span>Keine bevorstehenden Termine</span>
-            </div>
-            <div
-              v-for="appt in upcoming"
-              :key="appt.id"
-              class="drawer-item"
-              @click="selectDay(appt.date); upcomingDrawer = false"
-            >
-              <div class="drawer-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
-              <div class="drawer-item-info">
-                <span class="drawer-item-title">{{ appt.title }}</span>
-                <span class="drawer-item-meta">{{ formatUpDate(appt.date) }} · {{ appt.time }} · {{ appt.created_by }}</span>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="drawer-arrow">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-    </div>
-
     <!-- ── MOBILE BOTTOM NAV ── -->
     <nav class="bottom-nav">
       <button class="bn-item" :class="{ active: !selectedDay && !upcomingDrawer }" @click="selectedDay = null; upcomingDrawer = false">
@@ -173,6 +121,57 @@
       @delete="handleGlobalDelete"
     />
   </div>
+
+  <!-- Drawer OUTSIDE .app to avoid overflow clipping -->
+  <div v-if="username && upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
+    <div class="drawer">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <h3>Nächste Termine</h3>
+        <button class="drawer-close" @click="upcomingDrawer = false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="drawer-stats">
+        <div class="stat-card">
+          <span class="stat-n">{{ todayCount }}</span>
+          <span class="stat-l">Heute</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-n">{{ totalCount }}</span>
+          <span class="stat-l">Gesamt</span>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <div v-if="loading" class="drawer-loading">Lade Termine…</div>
+        <div v-else-if="upcoming.length === 0" class="drawer-empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" opacity=".25">
+            <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span>Keine bevorstehenden Termine</span>
+        </div>
+        <div
+          v-for="appt in upcoming"
+          :key="appt.id"
+          class="drawer-item"
+          @click="selectDay(appt.date); upcomingDrawer = false"
+        >
+          <div class="drawer-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
+          <div class="drawer-item-info">
+            <span class="drawer-item-title">{{ appt.title }}</span>
+            <span class="drawer-item-meta">{{ formatUpDate(appt.date) }} · {{ appt.time }} · {{ appt.created_by }}</span>
+            <span v-if="appt.accepted_by" class="drawer-accepted">✓ Akzeptiert von {{ appt.accepted_by }}</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="drawer-arrow">
+            <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -182,6 +181,7 @@ import MonthCalendar from './components/MonthCalendar.vue'
 import DayView from './components/DayView.vue'
 import AppointmentModal from './components/AppointmentModal.vue'
 import { useAppointments } from './composables/useAppointments.js'
+import { getRole } from './config/users.js'
 
 const username = ref(sessionStorage.getItem('tp_user') || '')
 
@@ -332,6 +332,7 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
 .drawer-item-title { font-size: 0.95rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .drawer-item-meta { font-size: 0.75rem; color: var(--text-2); }
 .drawer-arrow { color: var(--text-3); flex-shrink: 0; }
+.drawer-accepted { font-size: 0.7rem; color: #34a853; font-weight: 600; }
 
 /* ── MOBILE HEADER ── */
 .mobile-header { display: none; }
