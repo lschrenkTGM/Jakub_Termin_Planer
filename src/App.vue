@@ -88,9 +88,63 @@
       <MonthCalendar v-else @select-day="selectDay" />
     </main>
 
+    <!-- ── MOBILE UPCOMING DRAWER ── -->
+    <transition name="drawer">
+      <div v-if="upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
+        <div class="drawer">
+          <div class="drawer-handle"></div>
+          <div class="drawer-header">
+            <h3>Nächste Termine</h3>
+            <button class="drawer-close" @click="upcomingDrawer = false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="drawer-stats">
+            <div class="stat-card">
+              <span class="stat-n">{{ todayCount }}</span>
+              <span class="stat-l">Heute</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-n">{{ totalCount }}</span>
+              <span class="stat-l">Gesamt</span>
+            </div>
+          </div>
+
+          <div class="drawer-body">
+            <div v-if="loading" class="drawer-loading">Lade Termine…</div>
+            <div v-else-if="upcoming.length === 0" class="drawer-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" opacity=".25">
+                <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              <span>Keine bevorstehenden Termine</span>
+            </div>
+            <div
+              v-for="appt in upcoming"
+              :key="appt.id"
+              class="drawer-item"
+              @click="selectDay(appt.date); upcomingDrawer = false"
+            >
+              <div class="drawer-dot" :style="{ background: appt.color || '#1a73e8' }"></div>
+              <div class="drawer-item-info">
+                <span class="drawer-item-title">{{ appt.title }}</span>
+                <span class="drawer-item-meta">{{ formatUpDate(appt.date) }} · {{ appt.time }} · {{ appt.created_by }}</span>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="drawer-arrow">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- ── MOBILE BOTTOM NAV ── -->
     <nav class="bottom-nav">
-      <button class="bn-item" :class="{ active: !selectedDay }" @click="selectedDay = null">
+      <button class="bn-item" :class="{ active: !selectedDay && !upcomingDrawer }" @click="selectedDay = null; upcomingDrawer = false">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.8"/>
           <path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/>
@@ -103,12 +157,13 @@
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
         </svg>
       </button>
-      <button class="bn-item" @click="goToday">
+      <button class="bn-item" :class="{ active: upcomingDrawer }" @click="upcomingDrawer = true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
-        <span>Heute</span>
+        <span>Termine</span>
       </button>
     </nav>
 
@@ -147,6 +202,7 @@ const { appointments, loading, addAppointment, deleteAppointment, getCountForDat
 
 const selectedDay = ref(null)
 const globalModal = ref(false)
+const upcomingDrawer = ref(false)
 function selectDay(d) { selectedDay.value = d }
 
 const todayStr = new Date().toISOString().slice(0, 10)
@@ -299,5 +355,68 @@ async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal
     transition: background 0.15s, transform 0.1s;
   }
   .bn-fab:active { transform: scale(0.93); }
+
+  /* ── UPCOMING DRAWER ── */
+  .drawer-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(32,33,36,.4);
+    z-index: 50;
+    display: flex; align-items: flex-end;
+  }
+  .drawer {
+    width: 100%;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .drawer-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 12px auto 0;
+    flex-shrink: 0;
+  }
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem 0.5rem;
+    flex-shrink: 0;
+  }
+  .drawer-header h3 {
+    font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; color: var(--text);
+  }
+  .drawer-close {
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: var(--bg); color: var(--text-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .drawer-stats {
+    display: flex; gap: 0.5rem; padding: 0.5rem 1.25rem 0.75rem; flex-shrink: 0;
+  }
+  .drawer-body {
+    overflow-y: auto; flex: 1; padding: 0 0.75rem 0.5rem;
+  }
+  .drawer-loading, .drawer-empty {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 2rem 0; color: var(--text-3); font-size: 0.85rem;
+  }
+  .drawer-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0.85rem 0.75rem; border-radius: var(--radius-s);
+    cursor: pointer; transition: background 0.13s;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-item:last-child { border-bottom: none; }
+  .drawer-item:active { background: var(--bg); }
+  .drawer-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .drawer-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .drawer-item-title { font-size: 0.95rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drawer-item-meta { font-size: 0.75rem; color: var(--text-2); }
+  .drawer-arrow { color: var(--text-3); flex-shrink: 0; }
+
+  /* Drawer transition */
+  .drawer-enter-active, .drawer-leave-active { transition: opacity 0.25s ease; }
+  .drawer-enter-active .drawer, .drawer-leave-active .drawer { transition: transform 0.28s cubic-bezier(0.16,1,0.3,1); }
+  .drawer-enter-from, .drawer-leave-to { opacity: 0; }
+  .drawer-enter-from .drawer, .drawer-leave-to .drawer { transform: translateY(100%); }
 }
 </style>
