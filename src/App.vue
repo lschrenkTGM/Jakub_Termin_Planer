@@ -6,7 +6,7 @@
     <!-- ── DESKTOP SIDEBAR ── -->
     <aside class="sidebar">
       <div class="sidebar-top">
-        <div class="brand">
+        <div class="brand" @click="selectedDay = null" style="cursor:pointer">
           <div class="brand-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="4" width="18" height="17" rx="3" stroke="#1a73e8" stroke-width="2"/>
@@ -67,7 +67,7 @@
 
     <!-- ── MOBILE HEADER ── -->
     <header class="mobile-header">
-      <div class="mh-brand">
+      <div class="mh-brand" @click="selectedDay = null; upcomingDrawer = false" style="cursor:pointer">
         <div class="brand-icon-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="4" width="18" height="17" rx="3" stroke="#1a73e8" stroke-width="2"/>
@@ -84,7 +84,7 @@
 
     <!-- ── MAIN CONTENT ── -->
     <main class="main">
-      <DayView v-if="selectedDay" :date-str="selectedDay" :username="username" :user-role="userRole" @back="selectedDay = null" />
+      <DayView v-if="selectedDay" :date-str="selectedDay" :username="username" :user-role="userRole" @back="selectedDay = null" @navigate="selectedDay = $event" />
       <MonthCalendar v-else @select-day="selectDay" />
     </main>
 
