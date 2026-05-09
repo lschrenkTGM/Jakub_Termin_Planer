@@ -181,4 +181,17 @@ function hexToRgba(hex, alpha) {
   font-size: 0.68rem; font-weight: 600; color: var(--text-3);
   background: rgba(0,0,0,.06); border-radius: 20px; padding: 2px 7px; white-space: nowrap;
 }
+
+@media (max-width: 768px) {
+  .dv-header { padding: 0.65rem 0.75rem; gap: 0.6rem; }
+  .dv-title { font-size: 0.9rem; }
+  .dv-sub { font-size: 0.7rem; }
+  .add-btn span { display: none; } /* icon only on mobile */
+  .add-btn { padding: 0.55rem 0.75rem; border-radius: 50%; }
+  .hour-label { width: 48px; font-size: 0.62rem; padding: 0.6rem 0.4rem 0; }
+  .hour-slot { padding: 0.3rem 0.5rem 0.3rem 0.5rem; }
+  .hour-row { min-height: 52px; }
+  .event-creator { display: none; }
+  .slot-hint { display: none; }
+}
 </style>
