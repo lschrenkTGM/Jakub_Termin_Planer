@@ -6,17 +6,28 @@
     <!-- ── DESKTOP SIDEBAR ── -->
     <aside class="sidebar">
       <div class="sidebar-top">
-        <div class="brand" @click="selectedDay = null" style="cursor:pointer">
-          <div class="brand-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="4" width="18" height="17" rx="3" stroke="#1a73e8" stroke-width="2"/>
-              <path d="M3 9h18" stroke="#1a73e8" stroke-width="2"/>
-              <path d="M8 2v4M16 2v4" stroke="#1a73e8" stroke-width="2" stroke-linecap="round"/>
-              <rect x="7" y="13" width="3" height="3" rx="0.5" fill="#1a73e8"/>
-              <rect x="11" y="13" width="3" height="3" rx="0.5" fill="#34a853"/>
-            </svg>
+        <div class="brand-row">
+          <div class="brand" @click="selectedDay = null" style="cursor:pointer">
+            <div class="brand-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="4" width="18" height="17" rx="3" stroke="#1a73e8" stroke-width="2"/>
+                <path d="M3 9h18" stroke="#1a73e8" stroke-width="2"/>
+                <path d="M8 2v4M16 2v4" stroke="#1a73e8" stroke-width="2" stroke-linecap="round"/>
+                <rect x="7" y="13" width="3" height="3" rx="0.5" fill="#1a73e8"/>
+                <rect x="11" y="13" width="3" height="3" rx="0.5" fill="#34a853"/>
+              </svg>
+            </div>
+            <span class="brand-name">Terminplaner</span>
           </div>
-          <span class="brand-name">Terminplaner</span>
+          <button class="theme-btn" @click="toggleTheme" :title="dark ? 'Hellmodus' : 'Dunkelmodus'">
+            <svg v-if="dark" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
         <button class="create-btn" @click="openGlobalModal">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
@@ -77,6 +88,15 @@
         <span>Terminplaner</span>
       </div>
       <div class="mh-right">
+        <button class="theme-btn-sm" @click="toggleTheme" :title="dark ? 'Hellmodus' : 'Dunkelmodus'">
+          <svg v-if="dark" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <span v-if="loading" class="mh-loading">●</span>
         <div class="user-avatar-sm" @click="logout" title="Abmelden">{{ username[0].toUpperCase() }}</div>
       </div>
@@ -183,11 +203,15 @@ import DayView from './components/DayView.vue'
 import AppointmentModal from './components/AppointmentModal.vue'
 import { useAppointments } from './composables/useAppointments.js'
 import { loadUsers, verifyLogin } from './composables/useAuth.js'
+import { useTheme } from './composables/useTheme.js'
+
+const { dark, toggle: toggleTheme, init: initTheme } = useTheme()
 
 const username = ref('')
 const userRole = ref('')
 
 onMounted(async () => {
+  initTheme()
   const storedUser = sessionStorage.getItem('tp_user')
   const storedPass = sessionStorage.getItem('tp_pass')
   if (storedUser && storedPass) {
@@ -263,7 +287,15 @@ async function handleGlobalDeleteSeries(groupId) {
   display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
 }
 .sidebar-top { padding: 1.25rem 1rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+.theme-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: var(--bg); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.13s, color 0.13s; flex-shrink: 0;
+}
+.theme-btn:hover { background: var(--border); color: var(--text); }
 .brand-icon { width: 38px; height: 38px; background: var(--blue-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .brand-name { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
 .create-btn {
@@ -397,6 +429,12 @@ async function handleGlobalDeleteSeries(groupId) {
   }
   .mh-right { display: flex; align-items: center; gap: 8px; }
   .mh-loading { color: var(--blue); font-size: 1.2rem; animation: pulse 1s ease-in-out infinite; }
+  .theme-btn-sm {
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: var(--bg); color: var(--text-2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.13s;
+  }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .user-avatar-sm {
     width: 32px; height: 32px; background: var(--blue); border-radius: 50%;

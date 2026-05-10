@@ -18,6 +18,41 @@
   --radius-l:    20px;
   --font-head:   'Nunito', sans-serif;
   --font-body:   'Outfit', sans-serif;
+  --hover-muted:        #e8e8e8;
+  --color-accepted-bg:  #e6f4ea;
+  --color-accepted-fg:  #34a853;
+  --color-recurring-bg: #e8f0fe;
+  --color-recurring-fg: #1a73e8;
+  --color-error-bg:     #fce8e6;
+  --color-error-fg:     #c5221f;
+  --color-error-hover:  #fad2cf;
+  --color-badge-bg:     rgba(0,0,0,.07);
+}
+
+html[data-theme="dark"] {
+  --blue:        #5b9cf6;
+  --blue-light:  #1a2d4a;
+  --blue-dark:   #4a88e5;
+  --blue-hover:  #7ab2f9;
+  --bg:          #111318;
+  --surface:     #1c1f26;
+  --sidebar-bg:  #161920;
+  --text:        #e4e6ea;
+  --text-2:      #9aa0ab;
+  --text-3:      #6b717d;
+  --border:      #2d3139;
+  --shadow-s:    0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-m:    0 2px 6px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3);
+  --shadow-l:    0 8px 28px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  --hover-muted:        #2a2d35;
+  --color-accepted-bg:  #1a3026;
+  --color-accepted-fg:  #4eca6e;
+  --color-recurring-bg: #172640;
+  --color-recurring-fg: #5b9cf6;
+  --color-error-bg:     #3a1c1c;
+  --color-error-fg:     #f28b82;
+  --color-error-hover:  #4a2424;
+  --color-badge-bg:     rgba(255,255,255,.1);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

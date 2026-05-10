@@ -161,7 +161,7 @@ function submit() {
   backdrop-filter: blur(2px);
 }
 .modal {
-  background: #fff;
+  background: var(--surface);
   border-radius: 20px;
   padding: 1.75rem;
   width: 100%; max-width: 480px;
@@ -181,7 +181,7 @@ h2 { font-family: var(--font-head); font-size: 1.15rem; font-weight: 800; color:
   display: flex; align-items: center; justify-content: center;
   transition: background 0.13s;
 }
-.close-btn:hover { background: #e8e8e8; }
+.close-btn:hover { background: var(--hover-muted); }
 
 form { display: flex; flex-direction: column; gap: 0.85rem; }
 
@@ -189,7 +189,7 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
 .field label {
   position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
   font-size: 0.88rem; color: var(--text-2); pointer-events: none;
-  transition: all 0.16s; background: #fff; padding: 0 4px; z-index: 1;
+  transition: all 0.16s; background: var(--surface); padding: 0 4px; z-index: 1;
 }
 .field textarea ~ label,
 .field.focused label,
@@ -236,8 +236,8 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
 .recurring-badge {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 0.4rem 0.75rem;
-  background: #e8f0fe; border-radius: 20px;
-  font-size: 0.78rem; font-weight: 600; color: var(--blue);
+  background: var(--color-recurring-bg); border-radius: 20px;
+  font-size: 0.78rem; font-weight: 600; color: var(--color-recurring-fg);
   align-self: flex-start;
 }
 
@@ -259,11 +259,11 @@ button { padding: 0.6rem 1.1rem; border-radius: var(--radius-s); font-size: 0.88
 .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 2px 6px rgba(26,115,232,.3); }
 .btn-primary:hover { background: var(--blue-hover); }
 .btn-ghost { background: var(--bg); color: var(--text-2); }
-.btn-ghost:hover { background: #e8e8e8; }
-.btn-delete { display: flex; align-items: center; gap: 5px; background: #fce8e6; color: #c5221f; }
-.btn-delete:hover { background: #fad2cf; }
-.btn-delete-series { display: flex; align-items: center; gap: 5px; background: #fce8e6; color: #c5221f; }
-.btn-delete-series:hover { background: #fad2cf; }
+.btn-ghost:hover { background: var(--hover-muted); }
+.btn-delete { display: flex; align-items: center; gap: 5px; background: var(--color-error-bg); color: var(--color-error-fg); }
+.btn-delete:hover { background: var(--color-error-hover); }
+.btn-delete-series { display: flex; align-items: center; gap: 5px; background: var(--color-error-bg); color: var(--color-error-fg); }
+.btn-delete-series:hover { background: var(--color-error-hover); }
 
 @media (max-width: 768px) {
   .modal-backdrop { align-items: flex-end; padding: 0; }
