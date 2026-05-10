@@ -169,7 +169,7 @@ async function submitPassword() {
 <style scoped>
 .login-page {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: #f0f4ff; position: relative; overflow: hidden;
+  background: var(--bg); position: relative; overflow: hidden;
 }
 .login-bg { position: absolute; inset: 0; pointer-events: none; }
 .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35; animation: drift 12s ease-in-out infinite; }
@@ -179,7 +179,7 @@ async function submitPassword() {
 @keyframes drift { 0%,100% { transform:translate(0,0) scale(1); } 33% { transform:translate(30px,-20px) scale(1.05); } 66% { transform:translate(-20px,15px) scale(.97); } }
 
 .login-card {
-  background: #fff; border-radius: 24px; padding: 2.5rem 2rem;
+  background: var(--surface); border-radius: 24px; padding: 2.5rem 2rem;
   width: 100%; max-width: 420px;
   box-shadow: 0 20px 60px rgba(26,115,232,.12), 0 4px 16px rgba(0,0,0,.08);
   position: relative; z-index: 1;
@@ -212,7 +212,7 @@ h1 { font-family:var(--font-head); font-size:1.5rem; font-weight:800; color:var(
 .user-btn {
   display:flex; align-items:center; gap:12px;
   padding:.75rem 1rem; border:1.5px solid var(--border); border-radius:12px;
-  background:#fff; cursor:pointer; transition:all .13s; text-align:left;
+  background:var(--surface); cursor:pointer; transition:all .13s; text-align:left;
 }
 .user-btn:hover, .user-btn.selected { border-color:var(--blue); background:var(--blue-light); }
 .ub-avatar {
@@ -232,7 +232,7 @@ h1 { font-family:var(--font-head); font-size:1.5rem; font-weight:800; color:var(
 .field label {
   position:absolute; left:13px; top:50%; transform:translateY(-50%);
   font-size:.88rem; color:var(--text-2); pointer-events:none;
-  transition:all .16s; background:#fff; padding:0 4px;
+  transition:all .16s; background:var(--surface); padding:0 4px;
 }
 .field.focused label,.field.filled label { top:0; font-size:.7rem; color:var(--blue); font-weight:600; }
 .field.error label { color:#ea4335; }
