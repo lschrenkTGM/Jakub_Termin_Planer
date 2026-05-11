@@ -351,7 +351,7 @@ async function handleGlobalDeleteSeries(groupId) {
 /* ── UPCOMING DRAWER (always available, shown via v-if) ── */
 .drawer-backdrop {
   position: fixed; inset: 0;
-  background: rgba(32,33,36,.45);
+  background: rgba(0,0,0,.6);
   z-index: 100;
   display: flex; align-items: flex-end;
   animation: backdropIn 0.2s ease;

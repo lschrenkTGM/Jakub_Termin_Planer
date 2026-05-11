@@ -155,7 +155,7 @@ function submit() {
 <style scoped>
 .modal-backdrop {
   position: fixed; inset: 0;
-  background: rgba(32,33,36,.45);
+  background: rgba(0,0,0,.6);
   display: flex; align-items: center; justify-content: center;
   z-index: 200; padding: 1rem;
   backdrop-filter: blur(2px);
@@ -200,6 +200,8 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
   border: 1.5px solid var(--border); border-radius: var(--radius-s);
   font-size: 0.95rem; outline: none; transition: border-color 0.16s;
   background: transparent; font-family: var(--font-body);
+  color: var(--text);
+  color-scheme: inherit;
 }
 .field.focused input, .field.focused textarea { border-color: var(--blue); }
 .field textarea { resize: none; padding-top: 1rem; }

@@ -347,7 +347,7 @@ function eventStyle(appt) {
     left: `calc(${col * pct}% + ${gutter / 2}px)`,
     width: `calc(${pct}% - ${gutter}px)`,
     borderLeftColor: appt.color || '#1a73e8',
-    background: hexToRgba(appt.color || '#1a73e8', 0.08),
+    background: hexToRgba(appt.color || '#1a73e8', 0.13),
   }
 }
 
@@ -512,7 +512,7 @@ function hexToRgba(hex, alpha) {
 /* ── Detail Sheet ── */
 .detail-backdrop {
   position: absolute; inset: 0; z-index: 50;
-  background: rgba(32,33,36,.4);
+  background: rgba(0,0,0,.55);
   display: flex; align-items: flex-end;
   animation: backdropIn 0.18s ease;
 }
