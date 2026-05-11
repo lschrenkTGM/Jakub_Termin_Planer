@@ -45,19 +45,18 @@
         </div>
       </div>
 
-      <div class="stats-row">
-        <div class="stat-card">
-          <span class="stat-n">{{ todayCount }}</span>
-          <span class="stat-l">Heute</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-n">{{ totalCount }}</span>
-          <span class="stat-l">Gesamt</span>
-        </div>
-      </div>
-
       <div class="upcoming-section">
         <h3 class="section-title">Bevorstehend</h3>
+        <div class="person-filter">
+          <button class="person-chip" :class="{ active: selectedPerson === null }" @click="selectedPerson = null">Alle</button>
+          <button
+            v-for="p in upcomingPersons"
+            :key="p"
+            class="person-chip"
+            :class="{ active: selectedPerson === p }"
+            @click="selectedPerson = p"
+          >{{ p }}</button>
+        </div>
         <div v-if="loading" class="loading-hint">Lade Termine…</div>
         <div v-else-if="upcoming.length === 0" class="empty-state">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" opacity=".3">
@@ -71,6 +70,7 @@
           <div class="up-content">
             <span class="up-title">{{ appt.title }}</span>
             <span class="up-meta">{{ formatUpDate(appt.date) }} · {{ appt.time }} · {{ appt.created_by }}</span>
+            <span v-if="appt.accepted_by" class="up-accepted">✓ {{ appt.accepted_by }}</span>
           </div>
         </div>
       </div>
@@ -155,15 +155,15 @@
           </svg>
         </button>
       </div>
-      <div class="drawer-stats">
-        <div class="stat-card">
-          <span class="stat-n">{{ todayCount }}</span>
-          <span class="stat-l">Heute</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-n">{{ totalCount }}</span>
-          <span class="stat-l">Gesamt</span>
-        </div>
+      <div class="drawer-person-filter">
+        <button class="person-chip" :class="{ active: selectedPerson === null }" @click="selectedPerson = null">Alle</button>
+        <button
+          v-for="p in upcomingPersons"
+          :key="p"
+          class="person-chip"
+          :class="{ active: selectedPerson === p }"
+          @click="selectedPerson = p"
+        >{{ p }}</button>
       </div>
       <div class="drawer-body">
         <div v-if="loading" class="drawer-loading">Lade Termine…</div>
@@ -241,23 +241,31 @@ function logout() {
   selectedDay.value = null
 }
 
-const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup, getCountForDate } = useAppointments()
+const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup } = useAppointments()
 
 const selectedDay = ref(null)
 const globalModal = ref(false)
 const upcomingDrawer = ref(false)
+const selectedPerson = ref(null)
 function selectDay(d) { selectedDay.value = d }
 
 const todayStr = new Date().toISOString().slice(0, 10)
-const todayCount = computed(() => getCountForDate(todayStr))
-const totalCount = computed(() => appointments.value.length)
 
-const upcoming = computed(() =>
-  appointments.value
-    .filter(a => a.date >= todayStr)
+const upcomingPersons = computed(() => {
+  const persons = appointments.value
+    .filter(a => a.date >= todayStr && !a.recurring_group_id)
+    .map(a => a.created_by)
+    .filter(Boolean)
+  return [...new Set(persons)].sort()
+})
+
+const upcoming = computed(() => {
+  let list = appointments.value.filter(a => a.date >= todayStr && !a.recurring_group_id)
+  if (selectedPerson.value) list = list.filter(a => a.created_by === selectedPerson.value)
+  return list
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-    .slice(0, 7)
-)
+    .slice(0, 15)
+})
 
 function formatUpDate(dateStr) {
   if (dateStr === todayStr) return 'Heute'
@@ -320,20 +328,25 @@ async function handleGlobalDeleteSeries(groupId) {
 .user-info { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .user-name { font-size: 0.9rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-sub { font-size: 0.72rem; color: var(--text-3); }
-.stats-row { display: flex; gap: 0.5rem; padding: 0 1rem; margin-top: 0.25rem; }
-.stat-card { flex: 1; background: var(--bg); border-radius: var(--radius-m); padding: 0.85rem 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.stat-n { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; color: var(--blue); line-height: 1; }
-.stat-l { font-size: 0.7rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
 .upcoming-section { flex: 1; padding: 0 0.75rem 1rem; margin-top: 0.5rem; }
-.section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); padding: 0.5rem 0.5rem 0.6rem; }
+.section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); padding: 0.5rem 0.5rem 0.4rem; }
+.person-filter { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 0.25rem 0.6rem; }
+.person-chip {
+  padding: 0.25rem 0.7rem; border-radius: 20px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 0.75rem; font-weight: 600; color: var(--text-2);
+  cursor: pointer; transition: all 0.13s;
+}
+.person-chip:hover { border-color: var(--blue); color: var(--blue); }
+.person-chip.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .loading-hint { font-size: 0.8rem; color: var(--text-3); padding: 0.5rem; }
 .empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 1.5rem 0; color: var(--text-3); font-size: 0.8rem; }
-.upcoming-item { display: flex; align-items: center; gap: 10px; padding: 0.6rem 0.75rem; border-radius: var(--radius-s); cursor: pointer; transition: background 0.13s; margin-bottom: 2px; }
+.upcoming-item { display: flex; align-items: flex-start; gap: 10px; padding: 0.6rem 0.75rem; border-radius: var(--radius-s); cursor: pointer; transition: background 0.13s; margin-bottom: 2px; }
 .upcoming-item:hover { background: var(--bg); }
-.up-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.up-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
 .up-content { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 .up-title { font-size: 0.88rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .up-meta { font-size: 0.72rem; color: var(--text-2); }
+.up-accepted { font-size: 0.68rem; color: #34a853; font-weight: 700; }
 
 /* ── UPCOMING DRAWER (always available, shown via v-if) ── */
 .drawer-backdrop {
@@ -370,7 +383,7 @@ async function handleGlobalDeleteSeries(groupId) {
   background: var(--bg); color: var(--text-2);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
-.drawer-stats { display: flex; gap: 0.5rem; padding: 0.25rem 1.25rem 0.75rem; flex-shrink: 0; }
+.drawer-person-filter { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 1.25rem 0.75rem; flex-shrink: 0; }
 .drawer-body { overflow-y: auto; flex: 1; padding: 0 0.75rem 0.5rem; }
 .drawer-loading { padding: 2rem 0; text-align: center; color: var(--text-3); font-size: 0.85rem; }
 .drawer-empty {
