@@ -33,6 +33,7 @@
         </button>
       </div>
 
+      <button v-if="!isToday" class="today-jump-btn" @click="emit('navigate', todayDateStr)">Heute</button>
       <button class="add-btn" @click="openModal(null, null)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
@@ -41,8 +42,17 @@
       </button>
     </div>
 
+    <div v-if="!loading && dayAppointments.length === 0" class="empty-day-notice">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" opacity=".5">
+        <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span>Noch keine Termine · Klicke auf eine Uhrzeit zum Hinzufügen</span>
+    </div>
+
     <!-- ── Timeline ── -->
-    <div class="timeline">
+    <div class="timeline" ref="timelineEl">
       <div class="grid-layer">
         <div
           v-for="hour in hours"
@@ -86,6 +96,11 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div v-if="currentTimeTop !== null" class="current-time-line" :style="{ top: currentTimeTop + 'px' }">
+        <span class="ctl-dot"></span>
+        <span class="ctl-rule"></span>
       </div>
     </div>
 
@@ -245,9 +260,10 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, nextTick, reactive, ref, watch } from 'vue'
 import AppointmentModal from './AppointmentModal.vue'
 import { useAppointments } from '../composables/useAppointments.js'
+import { useToast } from '../composables/useToast.js'
 import { canEdit, canAccept } from '../config/users.js'
 
 const props = defineProps({ dateStr: String, username: String, userRole: String })
@@ -255,8 +271,13 @@ const emit = defineEmits(['back', 'navigate'])
 
 const ROW_H = 60 // px per hour — must match CSS .hour-row height
 
-const { getForDate, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment } = useAppointments()
+const { getForDate, loading, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment } = useAppointments()
+const { show: showToast } = useToast()
 const hours = Array.from({ length: 24 }, (_, i) => i)
+
+const timelineEl = ref(null)
+const now = ref(new Date())
+let timeInterval = null
 
 const dayAppointments = computed(() => getForDate(props.dateStr))
 
@@ -287,6 +308,40 @@ function nextDay() { emit('navigate', shiftDay(+1)) }
 function formatDetailDate(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
+
+const todayDateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+
+const currentTimeTop = computed(() => {
+  if (!isToday.value) return null
+  return (now.value.getHours() * 60 + now.value.getMinutes()) / 60 * ROW_H
+})
+
+function scrollToNow() {
+  if (!timelineEl.value) return
+  const min = now.value.getHours() * 60 + now.value.getMinutes()
+  timelineEl.value.scrollTop = Math.max(0, (min / 60 * ROW_H) - 150)
+}
+
+onMounted(() => {
+  if (isToday.value) {
+    timeInterval = setInterval(() => { now.value = new Date() }, 60000)
+    nextTick(scrollToNow)
+  }
+  const escHandler = (e) => { if (e.key === 'Escape') detail.value = null }
+  window.addEventListener('keydown', escHandler)
+  onUnmounted(() => window.removeEventListener('keydown', escHandler))
+})
+
+watch(() => props.dateStr, () => {
+  clearInterval(timeInterval)
+  if (isToday.value) {
+    now.value = new Date()
+    timeInterval = setInterval(() => { now.value = new Date() }, 60000)
+    nextTick(scrollToNow)
+  }
+})
+
+onUnmounted(() => clearInterval(timeInterval))
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
 
@@ -363,10 +418,11 @@ function openDetail(appt) {
 
 async function doAccept() {
   await acceptAppointment(detail.value.id, props.username)
-  // detail ref points to reactive store item, it will update automatically
+  showToast('Termin akzeptiert')
 }
 async function doUnaccept() {
   await unacceptAppointment(detail.value.id)
+  showToast('Akzeptierung zurückgezogen', 'info')
 }
 function editFromDetail() {
   const appt = detail.value
@@ -378,6 +434,7 @@ async function doDeleteSeries() {
   if (!confirm('Alle Termine dieser Serie löschen?')) return
   await deleteRecurringGroup(detail.value.recurring_group_id)
   detail.value = null
+  showToast('Serie gelöscht', 'info')
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -390,14 +447,17 @@ function openModal(appt, time) {
   modal.open = true
 }
 async function handleSave(data) {
+  const wasEditing = !!modal.editing
   if (modal.editing) await updateAppointment(modal.editing.id, data)
   else await addAppointment(data)
   modal.open = false
+  showToast(wasEditing ? 'Termin gespeichert' : 'Termin erstellt')
 }
 async function handleDelete(id) {
   await deleteAppointment(id)
   modal.open = false
   detail.value = null
+  showToast('Termin gelöscht', 'info')
 }
 
 async function handleDeleteSeries(groupId) {
@@ -405,6 +465,7 @@ async function handleDeleteSeries(groupId) {
   await deleteRecurringGroup(groupId)
   modal.open = false
   detail.value = null
+  showToast('Serie gelöscht', 'info')
 }
 
 async function handleAccept(id) { await acceptAppointment(id, props.username) }
@@ -579,6 +640,32 @@ function hexToRgba(hex, alpha) {
 .btn-delete-series { background: var(--color-error-bg); color: var(--color-error-fg); }
 .btn-delete-series:hover { background: var(--color-error-hover); }
 
+/* ── Current time indicator ── */
+.current-time-line {
+  position: absolute; left: 0; right: 6px; z-index: 10; pointer-events: none;
+  display: flex; align-items: center;
+}
+.ctl-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: #ea4335;
+  flex-shrink: 0; margin-left: 58px;
+}
+.ctl-rule { flex: 1; height: 1.5px; background: #ea4335; opacity: .8; }
+
+/* ── Empty day notice ── */
+.empty-day-notice {
+  display: flex; align-items: center; gap: 10px;
+  padding: .6rem 1.5rem; border-bottom: 1px solid var(--border);
+  background: var(--bg); color: var(--text-3); font-size: .8rem; flex-shrink: 0;
+}
+
+/* ── Today jump button ── */
+.today-jump-btn {
+  padding: .4rem .9rem; border: 1.5px solid var(--border); border-radius: 20px;
+  background: transparent; font-size: .82rem; font-weight: 600; color: var(--text-2);
+  transition: all .13s; flex-shrink: 0;
+}
+.today-jump-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .dv-header { padding: 0.65rem 0.75rem; gap: 0.5rem; }
@@ -594,5 +681,8 @@ function hexToRgba(hex, alpha) {
   .event-creator-badge { display: none; }
   .detail-body { padding: 1rem 1rem 1.25rem; }
   .detail-title { font-size: 1.1rem; }
+  .today-jump-btn { display: none; }
+  .ctl-dot { margin-left: 40px; }
+  .empty-day-notice { padding: .5rem .75rem; font-size: .76rem; }
 }
 </style>

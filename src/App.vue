@@ -144,6 +144,13 @@
   </div>
 
   <!-- Drawer OUTSIDE .app to avoid overflow clipping -->
+  <TransitionGroup v-if="username" tag="div" name="toast" class="toast-container">
+    <div v-for="t in toasts" :key="t.id" class="toast">
+      <span class="toast-dot" :class="'dot-' + t.type"></span>
+      {{ t.msg }}
+    </div>
+  </TransitionGroup>
+
   <div v-if="username && upcomingDrawer" class="drawer-backdrop" @click.self="upcomingDrawer = false">
     <div class="drawer">
       <div class="drawer-handle"></div>
@@ -202,6 +209,7 @@ import MonthCalendar from './components/MonthCalendar.vue'
 import DayView from './components/DayView.vue'
 import AppointmentModal from './components/AppointmentModal.vue'
 import { useAppointments } from './composables/useAppointments.js'
+import { useToast } from './composables/useToast.js'
 import { loadUsers, verifyLogin } from './composables/useAuth.js'
 import { useTheme } from './composables/useTheme.js'
 
@@ -242,6 +250,7 @@ function logout() {
 }
 
 const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup } = useAppointments()
+const { toasts, show: showToast } = useToast()
 
 const selectedDay = ref(null)
 const globalModal = ref(false)
@@ -276,17 +285,41 @@ function formatUpDate(dateStr) {
 
 function goToday() { selectedDay.value = todayStr }
 function openGlobalModal() { globalModal.value = true }
-async function handleGlobalSave(data) { await addAppointment(data); globalModal.value = false }
-async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal.value = false }
+async function handleGlobalSave(data) { await addAppointment(data); globalModal.value = false; showToast('Termin erstellt') }
+async function handleGlobalDelete(id) { await deleteAppointment(id); globalModal.value = false; showToast('Termin gelöscht', 'info') }
 async function handleGlobalDeleteSeries(groupId) {
   if (!confirm('Alle Termine dieser Serie löschen?')) return
   await deleteRecurringGroup(groupId)
   globalModal.value = false
+  showToast('Serie gelöscht', 'info')
 }
 </script>
 
 <style scoped>
 .app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Toasts ── */
+.toast-container {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: #1e2028; color: #e8eaed;
+  padding: .6rem 1.2rem; border-radius: 10px;
+  font-size: .87rem; font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  display: flex; align-items: center; gap: 9px;
+  white-space: nowrap;
+}
+.toast-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-success { background: #4eca6e; }
+.dot-info { background: #9aa0ab; }
+.dot-error { background: #f28b82; }
+.toast-enter-active { transition: all .22s cubic-bezier(.16,1,.3,1); }
+.toast-leave-active { transition: all .18s ease; }
+.toast-enter-from { opacity: 0; transform: translateY(14px) scale(.95); }
+.toast-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* ── SIDEBAR (desktop only) ── */
 .sidebar {
@@ -488,5 +521,6 @@ async function handleGlobalDeleteSeries(groupId) {
   }
   .bn-fab:active { transform: scale(0.93); }
 
+  .toast-container { bottom: 5.5rem; }
 }
 </style>

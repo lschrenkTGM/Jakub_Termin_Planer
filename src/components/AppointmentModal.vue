@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   prefillDate: String,
@@ -150,6 +150,12 @@ watch(() => props.editing, (appt) => {
 function submit() {
   emit('save', { ...form, created_by: props.username })
 }
+
+onMounted(() => {
+  const handler = (e) => { if (e.key === 'Escape') emit('close') }
+  window.addEventListener('keydown', handler)
+  onUnmounted(() => window.removeEventListener('keydown', handler))
+})
 </script>
 
 <style scoped>
