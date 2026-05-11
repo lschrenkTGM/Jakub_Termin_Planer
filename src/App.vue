@@ -85,7 +85,10 @@
             <path d="M3 9h18" stroke="#1a73e8" stroke-width="2"/>
           </svg>
         </div>
-        <span>Terminplaner</span>
+        <div class="mh-brand-text">
+          <span class="mh-title">Terminplaner</span>
+          <span class="mh-date">{{ todayLabel }}</span>
+        </div>
       </div>
       <div class="mh-right">
         <button class="theme-btn-sm" @click="toggleTheme" :title="dark ? 'Hellmodus' : 'Dunkelmodus'">
@@ -259,6 +262,7 @@ const selectedPerson = ref(null)
 function selectDay(d) { selectedDay.value = d }
 
 const todayStr = new Date().toISOString().slice(0, 10)
+const todayLabel = new Date().toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
 
 const upcomingPersons = computed(() => {
   const persons = appointments.value
@@ -395,7 +399,7 @@ async function handleGlobalDeleteSeries(groupId) {
   width: 100%;
   background: var(--surface);
   border-radius: 20px 20px 0 0;
-  max-height: 80vh;
+  max-height: 92vh;
   display: flex; flex-direction: column;
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
   animation: drawerUp 0.3s cubic-bezier(0.16,1,0.3,1);
@@ -466,12 +470,15 @@ async function handleGlobalDeleteSeries(groupId) {
     z-index: 20;
   }
   .mh-brand {
-    display: flex; align-items: center; gap: 8px;
-    font-family: var(--font-head); font-size: 1rem; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
   }
+  .mh-brand-text { display: flex; flex-direction: column; gap: 1px; }
+  .mh-title { font-family: var(--font-head); font-size: 0.95rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+  .mh-date { font-size: 0.7rem; color: var(--text-3); font-weight: 500; }
   .brand-icon-sm {
-    width: 30px; height: 30px; background: var(--blue-light);
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; background: var(--blue-light);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
   }
   .mh-right { display: flex; align-items: center; gap: 8px; }
   .mh-loading { color: var(--blue); font-size: 1.2rem; animation: pulse 1s ease-in-out infinite; }
@@ -495,31 +502,36 @@ async function handleGlobalDeleteSeries(groupId) {
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.75rem;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--border);
     flex-shrink: 0;
+    gap: 0.25rem;
   }
   .bn-item {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     background: none; border: none; color: var(--text-3);
-    font-size: 0.65rem; font-weight: 600; padding: 0.4rem 1rem;
-    transition: color 0.13s;
+    font-size: 0.67rem; font-weight: 600;
+    padding: 0.45rem 1.1rem; border-radius: 14px;
+    transition: color 0.15s, background 0.15s;
+    flex: 1;
   }
-  .bn-item.active { color: var(--blue); }
-  .bn-item span { text-transform: uppercase; letter-spacing: 0.4px; }
+  .bn-item.active { color: var(--blue); background: var(--blue-light); }
+  .bn-item span { letter-spacing: 0; }
+  .bn-item:active:not(.active) { background: var(--bg); }
 
   .bn-fab {
     width: 52px; height: 52px;
     background: var(--blue); color: #fff;
-    border: none; border-radius: 50%;
+    border: none; border-radius: 16px;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(26,115,232,.4);
-    margin-top: -20px;
-    transition: background 0.15s, transform 0.1s;
+    box-shadow: 0 4px 18px rgba(26,115,232,.5);
+    margin-top: -16px;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.12s;
   }
-  .bn-fab:active { transform: scale(0.93); }
+  .bn-fab:active { transform: scale(0.88); }
 
   .toast-container { bottom: 5.5rem; }
 }

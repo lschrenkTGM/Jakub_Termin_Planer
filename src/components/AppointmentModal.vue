@@ -1,6 +1,7 @@
 <template>
   <div class="modal-backdrop" @click.self="$emit('close')">
     <div class="modal">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h2>{{ editing ? 'Termin bearbeiten' : 'Neuer Termin' }}</h2>
         <button class="close-btn" @click="$emit('close')">
@@ -179,6 +180,7 @@ onMounted(() => {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+.modal-drag-handle { display: none; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
 h2 { font-family: var(--font-head); font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 0; }
 .close-btn {
@@ -276,13 +278,21 @@ button { padding: 0.6rem 1.1rem; border-radius: var(--radius-s); font-size: 0.88
 @media (max-width: 768px) {
   .modal-backdrop { align-items: flex-end; padding: 0; }
   .modal {
-    border-radius: 20px 20px 0 0;
+    border-radius: 22px 22px 0 0;
     max-width: 100%;
-    max-height: 92vh;
+    max-height: 94vh;
     overflow-y: auto;
-    animation: slideUp 0.28s cubic-bezier(0.16,1,0.3,1);
-    padding-bottom: max(1.75rem, env(safe-area-inset-bottom));
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+    padding: 0 1.5rem 1.5rem;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
+  .modal-drag-handle {
+    display: block;
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 12px auto 1rem;
+    flex-shrink: 0;
+  }
+  .modal-header { margin-bottom: 1rem; }
   @keyframes slideUp {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
