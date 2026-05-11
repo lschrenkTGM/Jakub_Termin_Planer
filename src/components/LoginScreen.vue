@@ -239,6 +239,7 @@ h1 { font-family:var(--font-head); font-size:1.5rem; font-weight:800; color:var(
 .field input {
   width:100%; padding:.85rem 1rem; border:1.5px solid var(--border);
   border-radius:var(--radius-s); font-size:1rem; outline:none; transition:border-color .16s; background:transparent;
+  color: var(--text); color-scheme: inherit;
 }
 .field.focused input { border-color:var(--blue); }
 .field.error input { border-color:#ea4335; }
