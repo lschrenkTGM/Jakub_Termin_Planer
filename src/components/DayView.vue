@@ -676,11 +676,14 @@ function hexToRgba(hex, alpha) {
   .hour-slot { padding: 0.2rem 0.4rem; }
   .slot-hint { display: none; }
   .events-layer { left: 46px; padding: 0 3px; }
-  .event-block { padding: 0.25rem 0.4rem; gap: 4px; }
-  .event-title { font-size: 0.75rem; }
+  .event-block { padding: 0.3rem 0.5rem; gap: 4px; border-radius: 0 8px 8px 0; }
+  .event-block:active { filter: brightness(0.85); }
+  .event-title { font-size: 0.78rem; }
+  .event-time { font-size: 0.65rem; }
   .event-creator-badge { display: none; }
-  .detail-body { padding: 1rem 1rem 1.25rem; }
+  .detail-body { padding: 1rem 1.1rem 1.25rem; }
   .detail-title { font-size: 1.1rem; }
+  .detail-btn { font-size: 0.82rem; padding: 0.55rem 1rem; }
   .today-jump-btn { display: none; }
   .ctl-dot { margin-left: 40px; }
   .empty-day-notice { padding: .5rem .75rem; font-size: .76rem; }
