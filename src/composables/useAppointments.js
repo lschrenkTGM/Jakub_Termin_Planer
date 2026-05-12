@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase.js'
+import { sendNewAppointment, sendAppointmentAccepted } from '../lib/discord.js'
 
 const appointments = ref([])
 const loading = ref(true)
@@ -62,7 +63,10 @@ export function useAppointments() {
         color:       appt.color || '#1a73e8',
         created_by:  appt.created_by,
       }]).select().single()
-      if (data) appointments.value.push(data)
+      if (data) {
+        appointments.value.push(data)
+        sendNewAppointment(data, appointments.value)
+      }
     }
   }
 
@@ -90,11 +94,13 @@ export function useAppointments() {
   }
 
   async function acceptAppointment(id, username) {
+    const appt = appointments.value.find(a => a.id === id)
     await supabase.from('appointments').update({
       accepted_by: username,
       accepted_at: new Date().toISOString(),
     }).eq('id', id)
     await load()
+    if (appt) sendAppointmentAccepted(appt, username)
   }
 
   async function unacceptAppointment(id) {
