@@ -8,10 +8,7 @@ function isMaintenanceDay() {
 }
 
 async function sendHeartbeat() {
-  await supabase.from('heartbeats').upsert({
-    id: 'app',
-    last_seen: new Date().toISOString(),
-  })
+  await supabase.from('appointments').select('id').limit(1)
 }
 
 async function purgeOldAppointments() {
