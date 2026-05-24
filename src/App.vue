@@ -215,6 +215,7 @@ import { useAppointments } from './composables/useAppointments.js'
 import { useToast } from './composables/useToast.js'
 import { loadUsers, verifyLogin } from './composables/useAuth.js'
 import { useTheme } from './composables/useTheme.js'
+import { runMaintenance } from './lib/maintenance.js'
 
 const { dark, toggle: toggleTheme, init: initTheme } = useTheme()
 
@@ -223,6 +224,7 @@ const userRole = ref('')
 
 onMounted(async () => {
   initTheme()
+  runMaintenance()
   const storedUser = sessionStorage.getItem('tp_user')
   const storedPass = sessionStorage.getItem('tp_pass')
   if (storedUser && storedPass) {
