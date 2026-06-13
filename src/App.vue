@@ -206,7 +206,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import LoginScreen from './components/LoginScreen.vue'
 import MonthCalendar from './components/MonthCalendar.vue'
 import DayView from './components/DayView.vue'
@@ -216,6 +216,7 @@ import { useToast } from './composables/useToast.js'
 import { loadUsers, verifyLogin } from './composables/useAuth.js'
 import { useTheme } from './composables/useTheme.js'
 import { runMaintenance } from './lib/maintenance.js'
+import { sendGamingReminderIfNeeded } from './lib/discord.js'
 
 const { dark, toggle: toggleTheme, init: initTheme } = useTheme()
 
@@ -255,6 +256,15 @@ function logout() {
 }
 
 const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup } = useAppointments()
+
+// Gaming-Reminder: einmalig senden wenn Termine geladen und User eingeloggt
+let reminderSent = false
+watch([loading, username], ([isLoading, user]) => {
+  if (!isLoading && user && !reminderSent) {
+    reminderSent = true
+    sendGamingReminderIfNeeded(appointments.value)
+  }
+})
 const { toasts, show: showToast } = useToast()
 
 const selectedDay = ref(null)
@@ -268,14 +278,14 @@ const todayLabel = new Date().toLocaleDateString('de-DE', { weekday: 'short', da
 
 const upcomingPersons = computed(() => {
   const persons = appointments.value
-    .filter(a => a.date >= todayStr && !a.recurring_group_id)
+    .filter(a => a.date >= todayStr && !a.recurring_group_id && !a.rejected_by)
     .map(a => a.created_by)
     .filter(Boolean)
   return [...new Set(persons)].sort()
 })
 
 const upcoming = computed(() => {
-  let list = appointments.value.filter(a => a.date >= todayStr && !a.recurring_group_id)
+  let list = appointments.value.filter(a => a.date >= todayStr && !a.recurring_group_id && !a.rejected_by)
   if (selectedPerson.value) list = list.filter(a => a.created_by === selectedPerson.value)
   return list
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))

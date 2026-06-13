@@ -72,6 +72,7 @@
           v-for="appt in dayAppointments"
           :key="appt.id"
           class="event-block"
+          :class="{ 'event-rejected': appt.rejected_by, 'event-suggestion': appt.is_suggestion && !appt.accepted_by }"
           :style="eventStyle(appt)"
           @click.stop="openDetail(appt)"
         >
@@ -88,7 +89,14 @@
               {{ appt.time }}{{ appt.end_time ? ' – ' + appt.end_time : '' }}
               {{ appt.location ? ' · ' + appt.location : '' }}
             </span>
-            <div v-if="appt.accepted_by" class="accepted-tag">
+            <div v-if="appt.rejected_by" class="rejected-tag">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Abgelehnt
+            </div>
+            <div v-else-if="appt.is_suggestion && !appt.accepted_by" class="suggestion-tag">💡 Vorschlag</div>
+            <div v-else-if="appt.accepted_by" class="accepted-tag">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -193,6 +201,34 @@
                 <span class="detail-sub">{{ formatAcceptedAt(detail.accepted_at) }}</span>
               </div>
             </div>
+
+            <!-- Rejected -->
+            <div v-if="detail.rejected_by" class="detail-row">
+              <div class="detail-icon rejected-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="detail-row-text">
+                <span class="detail-val rejected-val">Abgelehnt von {{ detail.rejected_by }}</span>
+                <span class="detail-sub">{{ formatAcceptedAt(detail.rejected_at) }}</span>
+                <span v-if="detail.rejection_reason" class="detail-sub detail-reason">{{ detail.rejection_reason }}</span>
+              </div>
+            </div>
+
+            <!-- Is suggestion -->
+            <div v-if="detail.is_suggestion && !detail.accepted_by" class="detail-row">
+              <div class="detail-icon suggestion-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="detail-row-text">
+                <span class="detail-val suggestion-val">Gegenvorschlag</span>
+                <span v-if="detail.suggestion_note" class="detail-sub">Als Ersatz für: {{ detail.suggestion_note }}</span>
+              </div>
+            </div>
           </div>
 
           <!-- Action buttons -->
@@ -208,7 +244,7 @@
               Serie löschen
             </button>
             <button
-              v-if="canAccept(userRole) && !detail.accepted_by"
+              v-if="canAccept(userRole) && !detail.accepted_by && !detail.rejected_by"
               class="detail-btn btn-accept"
               @click="doAccept"
             >
@@ -227,8 +263,45 @@
               </svg>
               Akzeptierung zurückziehen
             </button>
+            <template v-if="!detail.rejected_by && !rejecting">
+              <button
+                v-if="canReject(username, detail, userRole)"
+                class="detail-btn btn-reject"
+                @click="rejecting = true"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Ablehnen
+              </button>
+            </template>
+            <template v-if="rejecting">
+              <div class="reject-inline">
+                <textarea
+                  v-model="rejectionNote"
+                  class="reject-reason-input"
+                  placeholder="Ablehnungsgrund (optional)…"
+                  rows="2"
+                />
+                <div class="reject-confirm-row">
+                  <button class="detail-btn btn-cancel-reject" @click="rejecting = false; rejectionNote = ''">Abbrechen</button>
+                  <button class="detail-btn btn-confirm-reject" @click="doReject">Bestätigen</button>
+                </div>
+              </div>
+            </template>
             <button
-              v-if="canEdit(username, detail, userRole)"
+              v-if="detail.rejected_by && !rejecting"
+              class="detail-btn btn-suggest"
+              @click="startSuggestion"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Gegenvorschlag machen
+            </button>
+            <button
+              v-if="canEdit(username, detail, userRole) && !detail.rejected_by"
               class="detail-btn btn-edit"
               @click="editFromDetail"
             >
@@ -246,12 +319,14 @@
     <!-- ── Edit/Create Modal ── -->
     <AppointmentModal
       v-if="modal.open"
-      :prefill-date="dateStr"
-      :prefill-time="modal.prefillTime"
+      :prefill-date="modal.prefillData?.date || dateStr"
+      :prefill-time="modal.prefillData?.time || modal.prefillTime"
+      :prefill-data="modal.prefillData"
       :editing="modal.editing"
+      :suggestion-mode="modal.suggestionMode"
       :username="username"
       :user-role="userRole"
-      @close="modal.open = false"
+      @close="modal.open = false; modal.suggestionMode = false; suggestionForAppt = null"
       @save="handleSave"
       @delete="handleDelete"
       @delete-series="handleDeleteSeries"
@@ -264,14 +339,14 @@ import { computed, onMounted, onUnmounted, nextTick, reactive, ref, watch } from
 import AppointmentModal from './AppointmentModal.vue'
 import { useAppointments } from '../composables/useAppointments.js'
 import { useToast } from '../composables/useToast.js'
-import { canEdit, canAccept } from '../config/users.js'
+import { canEdit, canAccept, canReject } from '../config/users.js'
 
 const props = defineProps({ dateStr: String, username: String, userRole: String })
 const emit = defineEmits(['back', 'navigate'])
 
 const ROW_H = 60 // px per hour — must match CSS .hour-row height
 
-const { getForDate, loading, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment } = useAppointments()
+const { appointments, getForDate, loading, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment, rejectAppointment } = useAppointments()
 const { show: showToast } = useToast()
 const hours = Array.from({ length: 24 }, (_, i) => i)
 
@@ -409,20 +484,44 @@ function eventStyle(appt) {
 // ── Detail sheet ──────────────────────────────────────────────────────────────
 
 const detail = ref(null)
-const detail_snapshot = ref(null)
+const rejecting = ref(false)
+const rejectionNote = ref('')
+const suggestionForAppt = ref(null)
 
 function openDetail(appt) {
   detail.value = appt
-  detail_snapshot.value = appt
+  rejecting.value = false
+  rejectionNote.value = ''
 }
 
 async function doAccept() {
-  await acceptAppointment(detail.value.id, props.username)
+  const id = detail.value.id
+  await acceptAppointment(id, props.username)
+  detail.value = appointments.value.find(a => a.id === id) || null
   showToast('Termin akzeptiert')
 }
 async function doUnaccept() {
-  await unacceptAppointment(detail.value.id)
+  const id = detail.value.id
+  await unacceptAppointment(id)
+  detail.value = appointments.value.find(a => a.id === id) || null
   showToast('Akzeptierung zurückgezogen', 'info')
+}
+async function doReject() {
+  const id = detail.value.id
+  await rejectAppointment(id, props.username, rejectionNote.value || null)
+  rejecting.value = false
+  rejectionNote.value = ''
+  detail.value = appointments.value.find(a => a.id === id) || null
+  showToast('Termin abgelehnt', 'info')
+}
+function startSuggestion() {
+  suggestionForAppt.value = detail.value
+  detail.value = null
+  modal.editing = null
+  modal.prefillData = suggestionForAppt.value
+  modal.suggestionMode = true
+  modal.prefillTime = null
+  modal.open = true
 }
 function editFromDetail() {
   const appt = detail.value
@@ -439,19 +538,33 @@ async function doDeleteSeries() {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
-const modal = reactive({ open: false, editing: null, prefillTime: null })
+const modal = reactive({ open: false, editing: null, prefillTime: null, prefillData: null, suggestionMode: false })
 
 function openModal(appt, time) {
   modal.editing = appt || null
   modal.prefillTime = time
+  modal.prefillData = null
+  modal.suggestionMode = false
   modal.open = true
 }
 async function handleSave(data) {
   const wasEditing = !!modal.editing
-  if (modal.editing) await updateAppointment(modal.editing.id, data)
-  else await addAppointment(data)
+  const isSuggestion = modal.suggestionMode
+  if (modal.editing) {
+    await updateAppointment(modal.editing.id, data)
+  } else if (isSuggestion) {
+    await addAppointment({
+      ...data,
+      is_suggestion: true,
+      suggestion_note: suggestionForAppt.value?.title || null,
+    })
+    suggestionForAppt.value = null
+  } else {
+    await addAppointment(data)
+  }
   modal.open = false
-  showToast(wasEditing ? 'Termin gespeichert' : 'Termin erstellt')
+  modal.suggestionMode = false
+  showToast(wasEditing ? 'Termin gespeichert' : isSuggestion ? 'Vorschlag gemacht' : 'Termin erstellt')
 }
 async function handleDelete(id) {
   await deleteAppointment(id)
@@ -568,6 +681,18 @@ function hexToRgba(hex, alpha) {
   font-size: 0.62rem; color: var(--color-accepted-fg); font-weight: 600;
   background: var(--color-accepted-bg); border-radius: 20px; padding: 1px 5px; width: fit-content;
 }
+.rejected-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.62rem; color: var(--color-error-fg); font-weight: 600;
+  background: var(--color-error-bg); border-radius: 20px; padding: 1px 5px; width: fit-content;
+}
+.suggestion-tag {
+  font-size: 0.62rem; color: #e65100; font-weight: 600;
+  background: #fff3e0; border-radius: 20px; padding: 1px 5px; width: fit-content;
+}
+.event-block.event-rejected { opacity: 0.45; }
+.event-block.event-rejected .event-title { text-decoration: line-through; }
+.event-block.event-suggestion { border-left-style: dashed; }
 .recur-icon { color: var(--text-3); flex-shrink: 0; }
 
 /* ── Detail Sheet ── */
@@ -618,12 +743,17 @@ function hexToRgba(hex, alpha) {
   color: var(--text-2); flex-shrink: 0;
 }
 .accepted-icon { background: var(--color-accepted-bg); color: var(--color-accepted-fg); }
+.rejected-icon { background: var(--color-error-bg); color: var(--color-error-fg); }
+.suggestion-icon { background: #fff3e0; color: #e65100; }
 .recurring-icon { background: var(--color-recurring-bg); color: var(--color-recurring-fg); }
 .detail-row-text { display: flex; flex-direction: column; gap: 1px; }
 .detail-val { font-size: 0.9rem; font-weight: 500; color: var(--text); }
 .detail-sub { font-size: 0.75rem; color: var(--text-2); }
+.detail-reason { font-style: italic; }
 .detail-desc { white-space: pre-wrap; line-height: 1.5; }
 .accepted-val { color: var(--color-accepted-fg); font-weight: 600; }
+.rejected-val { color: var(--color-error-fg); font-weight: 600; }
+.suggestion-val { color: #e65100; font-weight: 600; }
 
 .detail-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .detail-btn {
@@ -639,6 +769,22 @@ function hexToRgba(hex, alpha) {
 .btn-edit:hover { filter: brightness(0.92); }
 .btn-delete-series { background: var(--color-error-bg); color: var(--color-error-fg); }
 .btn-delete-series:hover { background: var(--color-error-hover); }
+.btn-reject { background: var(--color-error-bg); color: var(--color-error-fg); }
+.btn-reject:hover { background: var(--color-error-hover); }
+.btn-suggest { background: #fff3e0; color: #e65100; }
+.btn-suggest:hover { filter: brightness(0.92); }
+.reject-inline { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+.reject-reason-input {
+  width: 100%; padding: 0.6rem 0.75rem; border-radius: var(--radius-s);
+  border: 1.5px solid var(--color-error-fg); background: var(--bg);
+  color: var(--text); font-size: 0.85rem; resize: none; font-family: var(--font-body);
+  outline: none;
+}
+.reject-confirm-row { display: flex; gap: 0.5rem; }
+.btn-cancel-reject { background: var(--bg); color: var(--text-2); }
+.btn-cancel-reject:hover { background: var(--border); }
+.btn-confirm-reject { background: var(--color-error-fg); color: #fff; }
+.btn-confirm-reject:hover { filter: brightness(0.88); }
 
 /* ── Current time indicator ── */
 .current-time-line {

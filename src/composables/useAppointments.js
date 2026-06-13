@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase.js'
-import { sendNewAppointment, sendAppointmentAccepted } from '../lib/discord.js'
+import { sendNewAppointment, sendAppointmentAccepted, sendAppointmentRejected, sendAppointmentSuggested } from '../lib/discord.js'
 
 const appointments = ref([])
 const loading = ref(true)
@@ -54,18 +54,24 @@ export function useAppointments() {
       if (data) appointments.value.push(...data)
     } else {
       const { data } = await supabase.from('appointments').insert([{
-        title:       appt.title,
-        date:        appt.date,
-        time:        appt.time,
-        end_time:    appt.endTime || null,
-        description: appt.description || null,
-        location:    appt.location || null,
-        color:       appt.color || '#1a73e8',
-        created_by:  appt.created_by,
+        title:           appt.title,
+        date:            appt.date,
+        time:            appt.time,
+        end_time:        appt.endTime || null,
+        description:     appt.description || null,
+        location:        appt.location || null,
+        color:           appt.color || '#1a73e8',
+        created_by:      appt.created_by,
+        is_suggestion:   appt.is_suggestion || false,
+        suggestion_note: appt.suggestion_note || null,
       }]).select().single()
       if (data) {
         appointments.value.push(data)
-        sendNewAppointment(data, appointments.value)
+        if (appt.is_suggestion) {
+          sendAppointmentSuggested(data, appt.suggestion_note, appt.created_by)
+        } else {
+          sendNewAppointment(data, appointments.value)
+        }
       }
     }
   }
@@ -96,8 +102,9 @@ export function useAppointments() {
   async function acceptAppointment(id, username) {
     const appt = appointments.value.find(a => a.id === id)
     await supabase.from('appointments').update({
-      accepted_by: username,
-      accepted_at: new Date().toISOString(),
+      accepted_by:   username,
+      accepted_at:   new Date().toISOString(),
+      is_suggestion: false,
     }).eq('id', id)
     await load()
     if (appt) sendAppointmentAccepted(appt, username)
@@ -109,6 +116,17 @@ export function useAppointments() {
       accepted_at: null,
     }).eq('id', id)
     await load()
+  }
+
+  async function rejectAppointment(id, username, reason) {
+    const appt = appointments.value.find(a => a.id === id)
+    await supabase.from('appointments').update({
+      rejected_by:      username,
+      rejected_at:      new Date().toISOString(),
+      rejection_reason: reason || null,
+    }).eq('id', id)
+    await load()
+    if (appt) sendAppointmentRejected(appt, username, reason)
   }
 
   function getForDate(dateStr) {
@@ -124,7 +142,7 @@ export function useAppointments() {
   return {
     appointments, loading,
     addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup,
-    acceptAppointment, unacceptAppointment,
+    acceptAppointment, unacceptAppointment, rejectAppointment,
     getForDate, getCountForDate,
   }
 }
