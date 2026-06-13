@@ -301,6 +301,26 @@
               Gegenvorschlag machen
             </button>
             <button
+              v-if="detail.rejected_by && !rejecting && (userRole === 'admin' || detail.rejected_by === username)"
+              class="detail-btn btn-unreject"
+              @click="doUnreject"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12h18M9 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Ablehnung zurückziehen
+            </button>
+            <button
+              v-if="detail.rejected_by && !rejecting && canEdit(username, detail, userRole)"
+              class="detail-btn btn-delete-rejected"
+              @click="doDeleteRejected"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Löschen
+            </button>
+            <button
               v-if="canEdit(username, detail, userRole) && !detail.rejected_by"
               class="detail-btn btn-edit"
               @click="editFromDetail"
@@ -346,7 +366,7 @@ const emit = defineEmits(['back', 'navigate'])
 
 const ROW_H = 60 // px per hour — must match CSS .hour-row height
 
-const { appointments, getForDate, loading, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment, rejectAppointment } = useAppointments()
+const { appointments, getForDate, loading, addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup, acceptAppointment, unacceptAppointment, rejectAppointment, unrejectAppointment } = useAppointments()
 const { show: showToast } = useToast()
 const hours = Array.from({ length: 24 }, (_, i) => i)
 
@@ -513,6 +533,18 @@ async function doReject() {
   rejectionNote.value = ''
   detail.value = appointments.value.find(a => a.id === id) || null
   showToast('Termin abgelehnt', 'info')
+}
+async function doUnreject() {
+  const id = detail.value.id
+  await unrejectAppointment(id)
+  detail.value = appointments.value.find(a => a.id === id) || null
+  showToast('Ablehnung zurückgezogen', 'info')
+}
+async function doDeleteRejected() {
+  if (!confirm('Abgelehnten Termin wirklich löschen?')) return
+  await deleteAppointment(detail.value.id)
+  detail.value = null
+  showToast('Termin gelöscht', 'info')
 }
 function startSuggestion() {
   suggestionForAppt.value = detail.value
@@ -773,6 +805,10 @@ function hexToRgba(hex, alpha) {
 .btn-reject:hover { background: var(--color-error-hover); }
 .btn-suggest { background: #fff3e0; color: #e65100; }
 .btn-suggest:hover { filter: brightness(0.92); }
+.btn-unreject { background: var(--bg); color: var(--text-2); border: 1.5px solid var(--border); }
+.btn-unreject:hover { border-color: var(--blue); color: var(--blue); }
+.btn-delete-rejected { background: var(--color-error-bg); color: var(--color-error-fg); }
+.btn-delete-rejected:hover { background: var(--color-error-hover); }
 .reject-inline { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
 .reject-reason-input {
   width: 100%; padding: 0.6rem 0.75rem; border-radius: var(--radius-s);

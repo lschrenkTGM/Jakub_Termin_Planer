@@ -129,6 +129,15 @@ export function useAppointments() {
     if (appt) sendAppointmentRejected(appt, username, reason)
   }
 
+  async function unrejectAppointment(id) {
+    await supabase.from('appointments').update({
+      rejected_by:      null,
+      rejected_at:      null,
+      rejection_reason: null,
+    }).eq('id', id)
+    await load()
+  }
+
   function getForDate(dateStr) {
     return appointments.value
       .filter(a => a.date === dateStr)
@@ -142,7 +151,7 @@ export function useAppointments() {
   return {
     appointments, loading,
     addAppointment, updateAppointment, deleteAppointment, deleteRecurringGroup,
-    acceptAppointment, unacceptAppointment, rejectAppointment,
+    acceptAppointment, unacceptAppointment, rejectAppointment, unrejectAppointment,
     getForDate, getCountForDate,
   }
 }
