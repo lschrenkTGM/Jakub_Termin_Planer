@@ -3,7 +3,7 @@
     <div class="modal">
       <div class="modal-drag-handle"></div>
       <div class="modal-header">
-        <h2>{{ editing ? 'Termin bearbeiten' : 'Neuer Termin' }}</h2>
+        <h2>{{ suggestionMode ? 'Gegenvorschlag' : editing ? 'Termin bearbeiten' : 'Neuer Termin' }}</h2>
         <button class="close-btn" @click="$emit('close')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -50,8 +50,17 @@
             @focus="focuses.desc=true" @blur="focuses.desc=false" />
         </div>
 
+        <!-- Suggestion badge -->
+        <div v-if="suggestionMode" class="suggestion-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Gegenvorschlag — wähle einen alternativen Termin
+        </div>
+
         <!-- Recurring toggle (only when creating) -->
-        <label v-if="!editing" class="recurring-toggle">
+        <label v-if="!editing && !suggestionMode" class="recurring-toggle">
           <div class="toggle-switch" :class="{ on: form.recurring }" @click="form.recurring = !form.recurring">
             <div class="toggle-thumb"></div>
           </div>
@@ -120,8 +129,10 @@ import { reactive, watch, onMounted, onUnmounted } from 'vue'
 const props = defineProps({
   prefillDate: String,
   prefillTime: String,
+  prefillData: Object,
   editing: Object,
   username: String,
+  suggestionMode: Boolean,
 })
 const emit = defineEmits(['close', 'save', 'delete', 'delete-series'])
 
@@ -133,7 +144,7 @@ const form = reactive({
   endTime: '', description: '', location: '', color: '#1a73e8', recurring: false,
 })
 
-watch(() => props.editing, (appt) => {
+watch([() => props.editing, () => props.prefillData], ([appt, prefill]) => {
   if (appt) {
     Object.assign(form, {
       title: appt.title || '',
@@ -143,6 +154,17 @@ watch(() => props.editing, (appt) => {
       description: appt.description || '',
       location: appt.location || '',
       color: appt.color || '#1a73e8',
+      recurring: false,
+    })
+  } else if (prefill) {
+    Object.assign(form, {
+      title: prefill.title || '',
+      date: prefill.date || props.prefillDate || '',
+      time: prefill.time || props.prefillTime || '',
+      endTime: prefill.end_time || '',
+      description: prefill.description || '',
+      location: prefill.location || '',
+      color: prefill.color || '#1a73e8',
       recurring: false,
     })
   }
@@ -241,6 +263,16 @@ form { display: flex; flex-direction: column; gap: 0.85rem; }
 .toggle-label { display: flex; flex-direction: column; gap: 1px; }
 .toggle-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
 .toggle-sub { font-size: 0.72rem; color: var(--text-2); }
+
+/* Suggestion badge */
+.suggestion-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0.4rem 0.75rem;
+  background: #fff3e0; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 600; color: #e65100;
+  align-self: flex-start;
+}
+:root.dark .suggestion-badge { background: rgba(255,152,0,0.15); color: #ffb74d; }
 
 /* Recurring badge */
 .recurring-badge {

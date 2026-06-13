@@ -12,3 +12,8 @@ export function canEdit(username, appt, role) {
 export function canAccept(role) {
   return role === 'admin' || role === 'acceptor'
 }
+
+export function canReject(username, appt, role) {
+  if (role === 'admin') return true
+  return appt.created_by === username
+}
