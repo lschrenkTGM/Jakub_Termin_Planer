@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { supabase } from '../lib/supabase.js'
-import { sendNewAppointment, sendAppointmentAccepted, sendAppointmentRejected, sendAppointmentSuggested } from '../lib/discord.js'
 
 const appointments = ref([])
 const loading = ref(true)
@@ -67,11 +66,6 @@ export function useAppointments() {
       }]).select().single()
       if (data) {
         appointments.value.push(data)
-        if (appt.is_suggestion) {
-          sendAppointmentSuggested(data, appt.suggestion_note, appt.created_by)
-        } else {
-          sendNewAppointment(data, appointments.value)
-        }
       }
     }
   }
@@ -100,14 +94,12 @@ export function useAppointments() {
   }
 
   async function acceptAppointment(id, username) {
-    const appt = appointments.value.find(a => a.id === id)
     await supabase.from('appointments').update({
       accepted_by:   username,
       accepted_at:   new Date().toISOString(),
       is_suggestion: false,
     }).eq('id', id)
     await load()
-    if (appt) sendAppointmentAccepted(appt, username)
   }
 
   async function unacceptAppointment(id) {
@@ -119,14 +111,12 @@ export function useAppointments() {
   }
 
   async function rejectAppointment(id, username, reason) {
-    const appt = appointments.value.find(a => a.id === id)
     await supabase.from('appointments').update({
       rejected_by:      username,
       rejected_at:      new Date().toISOString(),
       rejection_reason: reason || null,
     }).eq('id', id)
     await load()
-    if (appt) sendAppointmentRejected(appt, username, reason)
   }
 
   async function unrejectAppointment(id) {

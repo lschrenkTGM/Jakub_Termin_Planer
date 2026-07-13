@@ -206,7 +206,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import LoginScreen from './components/LoginScreen.vue'
 import MonthCalendar from './components/MonthCalendar.vue'
 import DayView from './components/DayView.vue'
@@ -216,7 +216,6 @@ import { useToast } from './composables/useToast.js'
 import { loadUsers, verifyLogin } from './composables/useAuth.js'
 import { useTheme } from './composables/useTheme.js'
 import { runMaintenance } from './lib/maintenance.js'
-import { sendGamingReminderIfNeeded } from './lib/discord.js'
 
 const { dark, toggle: toggleTheme, init: initTheme } = useTheme()
 
@@ -257,14 +256,6 @@ function logout() {
 
 const { appointments, loading, addAppointment, deleteAppointment, deleteRecurringGroup } = useAppointments()
 
-// Gaming-Reminder: einmalig senden wenn Termine geladen und User eingeloggt
-let reminderSent = false
-watch([loading, username], ([isLoading, user]) => {
-  if (!isLoading && user && !reminderSent) {
-    reminderSent = true
-    sendGamingReminderIfNeeded(appointments.value)
-  }
-})
 const { toasts, show: showToast } = useToast()
 
 const selectedDay = ref(null)
